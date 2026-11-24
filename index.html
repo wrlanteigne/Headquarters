@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>William's HQ</title>
+  <meta name="theme-color" content="#050B18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HQ">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Start-up screen: plays every time the app opens -->
+  <div class="boot" id="boot" role="status" aria-label="Loading William's HQ">
+    <div class="reactor" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="boot-name">William's HQ</p>
+    <ul class="boot-lines">
+      <li>› Syncing Meadow Park shifts</li>
+      <li>› Loading school plan</li>
+      <li>› Reading accounts and TFSA</li>
+      <li>› Pulling Etsy and Stripe</li>
+      <li>› Scanning the Clearform pipeline</li>
+      <li>› Checking what needs you</li>
+      <li>› Loading gym, food and French</li>
+      <li>› Building today's plan</li>
+    </ul>
+    <div class="boot-bar"><i></i></div>
+    <p class="boot-hi">Welcome back, William</p>
+    <p class="boot-skip">Tap to skip</p>
+  </div>
+
+  <!-- Sign in -->
+  <main class="login" id="login" hidden>
+    <div class="panel login-box">
+      <p class="eyebrow">Secure access</p>
+      <h1>William's HQ</h1>
+      <form id="login-email">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+        <button class="btn primary" type="submit">Send code</button>
+      </form>
+      <form id="login-code" hidden>
+        <label for="code">Code from the email</label>
+        <input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" required placeholder="123456">
+        <button class="btn primary" type="submit">Sign in</button>
+        <button class="btn ghost" type="button" id="login-back">Use a different email</button>
+      </form>
+      <p class="msg" id="login-msg" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <!-- The app -->
+  <div class="app" id="app" hidden>
+    <header class="top">
+      <div>
+        <p class="eyebrow" id="today-label">—</p>
+        <h1 id="greeting">Hello, William</h1>
+      </div>
+      <div class="clock" id="clock" aria-label="Current time">--:--:--</div>
+    </header>
+
+    <div class="status" id="status" aria-label="Countdowns"></div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab on" role="tab" data-tab="ops" aria-selected="true">Ops</button>
+      <button class="tab" role="tab" data-tab="school" aria-selected="false">School</button>
+    </nav>
+
+    <section id="ops" class="view">
+      <div class="panel">
+        <div class="panel-h">
+          <h2>Your day</h2>
+          <span class="muted" id="day-kind">—</span>
+        </div>
+        <p class="line"><b id="day-done">0</b> of <b id="day-total">0</b> done · eat ~<b>3,100</b> kcal · drink <b>2.25–2.5 L</b> · bed by <b id="day-bed">—</b></p>
+        <div class="bar"><i id="day-bar"></i></div>
+        <button class="btn primary focus-cta" id="focus-next" type="button">▶ Focus · <span id="focus-next-label">—</span></button>
+        <ul class="plan" id="plan"></ul>
+        <p class="muted small">Missed a block? Skip it and start the next one on time. Phone in another room while you work.</p>
+      </div>
+    </section>
+
+    <section id="school" class="view" hidden>
+      <div class="panel">
+        <div class="panel-h"><h2>School</h2><span class="muted" id="school-left">—</span></div>
+        <div id="school-list"></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>W. Lanteigne · Whistler, BC</span>
+      <button class="link" id="signout" type="button">Sign out</button>
+    </footer>
+    <p class="toast" id="toast" role="status" hidden></p>
+  </div>
+
+  <!-- Focus mode -->
+  <div class="focus" id="focus" hidden role="dialog" aria-modal="true" aria-labelledby="focus-label">
+    <p class="eyebrow" id="focus-phase">Focus</p>
+    <h2 id="focus-label">—</h2>
+    <div class="ring">
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="ring-bg" cx="110" cy="110" r="96"></circle>
+        <circle class="ring-fg" id="ring-fg" cx="110" cy="110" r="96"></circle>
+      </svg>
+      <div class="ring-time" id="focus-time">50:00</div>
+    </div>
+    <div class="chips" id="focus-mins">
+      <button class="chip" data-min="25" type="button">25 min</button>
+      <button class="chip" data-min="30" type="button">30</button>
+      <button class="chip" data-min="45" type="button">45</button>
+      <button class="chip" data-min="50" type="button">50</button>
+    </div>
+    <div class="focus-btns">
+      <button class="btn primary" id="focus-go" type="button">Start</button>
+      <button class="btn" id="focus-done" type="button">Done early</button>
+      <button class="btn ghost" id="focus-close" type="button">Close</button>
+    </div>
+    <p class="muted small" id="focus-note">Phone face down. One thing only.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="plans.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
