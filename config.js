@@ -4,6 +4,8 @@
 window.HQ_CONFIG = {
   url: 'https://gwjpyqimqnubyjyrgonx.supabase.co',
   key: 'sb_publishable_yNAfPff-XzoXReO2Qjjo4Q_fX9Zk-lb',
+  // The one account that can unlock HQ (the password is what protects it)
+  ownerEmail: 'wrlanteigne@gmail.com',
   // Meadow Park pays every second Thursday; this is one known payday.
   paydayAnchor: '2026-12-03'
 };

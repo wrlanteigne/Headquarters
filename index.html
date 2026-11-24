@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -37,28 +37,13 @@
   <!-- Sign in -->
   <main class="login" id="login" hidden>
     <div class="panel login-box">
-      <p class="eyebrow">Secure access</p>
+      <p class="eyebrow">Locked</p>
       <h1>William's HQ</h1>
       <form id="login-pass">
-        <label for="pemail">Email</label>
-        <input id="pemail" type="email" autocomplete="username" required placeholder="you@example.com">
+        <input type="email" autocomplete="username" id="pemail" hidden>
         <label for="ppass">Password</label>
-        <input id="ppass" type="password" autocomplete="current-password" required>
-        <button class="btn primary" type="submit">Sign in</button>
-        <button class="btn ghost" type="button" id="use-email">No password yet? Email me a link</button>
-      </form>
-      <form id="login-email" hidden>
-        <label for="email">Email</label>
-        <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
-        <button class="btn primary" type="submit">Send sign-in email</button>
-        <button class="btn ghost" type="button" id="use-pass">Sign in with a password</button>
-      </form>
-      <form id="login-code" hidden>
-        <label for="code">Sign-in link or code from the email</label>
-        <input id="code" autocomplete="one-time-code" required placeholder="Paste the link here">
-        <p class="muted small">In the email, press and hold the sign-in button, tap Copy Link, then paste it here. On a computer you can just click the button in the email.</p>
-        <button class="btn primary" type="submit">Sign in</button>
-        <button class="btn ghost" type="button" id="login-back">Use a different email</button>
+        <input id="ppass" type="password" autocomplete="current-password" required autofocus>
+        <button class="btn primary" type="submit">Unlock</button>
       </form>
       <p class="msg" id="login-msg" aria-live="polite"></p>
     </div>
@@ -102,18 +87,9 @@
       </div>
     </section>
 
-    <form class="panel setpw" id="setpw" hidden>
-      <div class="panel-h"><h2>Set your password</h2></div>
-      <p class="muted small">Then you sign in on any device with your email and this password. No more emails.</p>
-      <input type="email" autocomplete="username" id="setpw-user" hidden>
-      <input id="setpw-pass" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
-      <button class="btn primary" type="submit">Save password</button>
-      <button class="btn ghost" type="button" id="setpw-close">Later</button>
-    </form>
-
     <footer class="foot">
       <span>W. Lanteigne · Whistler, BC</span>
-      <span><button class="link" id="setpw-open" type="button">Set password</button> <button class="link" id="signout" type="button">Sign out</button></span>
+      <button class="link" id="signout" type="button">Lock</button>
     </footer>
     <p class="toast" id="toast" role="status" hidden></p>
   </div>
@@ -144,8 +120,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=5"></script>
-  <script src="plans.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="config.js?v=6"></script>
+  <script src="plans.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

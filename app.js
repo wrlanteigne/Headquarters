@@ -34,64 +34,16 @@
     clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 3200);
   }
 
-  // ---------- Login (emailed code works inside the home-screen app) ----------
-  let pendingEmail = store.get('hq_email') || '';
-  $('email').value = pendingEmail;
-  $('login-email').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = $('email').value.trim();
-    $('login-msg').textContent = 'Sending…';
-    const {error} = await sb.auth.signInWithOtp({email, options: {emailRedirectTo: location.origin + location.pathname}});
-    if (error) { $('login-msg').textContent = error.message; return; }
-    pendingEmail = email; store.set('hq_email', email);
-    $('login-email').hidden = true; $('login-code').hidden = false;
-    $('login-msg').textContent = 'Email sent. It can take a minute.';
-    $('code').focus();
-  });
-  $('login-code').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    $('login-msg').textContent = 'Checking…';
-    const v = $('code').value.trim();
-    let res;
-    if (/^https?:\/\//.test(v)) {
-      // A pasted sign-in link: use its token, so signing in works inside the home-screen app too
-      let u; try { u = new URL(v); } catch (err) { $('login-msg').textContent = 'That link looks broken. Copy it again.'; return; }
-      const token = u.searchParams.get('token') || u.searchParams.get('token_hash');
-      const type = u.searchParams.get('type') === 'signup' ? 'signup' : 'email';
-      if (!token) { $('login-msg').textContent = 'That link has no sign-in token. Copy the link from the button in the email.'; return; }
-      res = await sb.auth.verifyOtp({token_hash: token, type});
-    } else {
-      res = await sb.auth.verifyOtp({email: pendingEmail, token: v, type: 'email'});
-    }
-    if (res.error) $('login-msg').textContent = res.error.message;
-  });
-  $('login-back').addEventListener('click', () => { $('login-code').hidden = true; $('login-email').hidden = false; $('login-msg').textContent = ''; });
-  $('signout').addEventListener('click', () => sb.auth.signOut());
-
-  // Email + password: the everyday way in, no emails needed
-  $('pemail').value = pendingEmail;
+  // ---------- Login: one password ----------
+  $('pemail').value = C.ownerEmail;
   $('login-pass').addEventListener('submit', async (e) => {
     e.preventDefault();
-    $('login-msg').textContent = 'Signing in…';
-    const email = $('pemail').value.trim();
-    store.set('hq_email', email);
-    const {error} = await sb.auth.signInWithPassword({email, password: $('ppass').value});
-    $('login-msg').textContent = error ? (error.message === 'Invalid login credentials' ? 'Wrong email or password. No password set yet? Use the email link once, then tap Set password.' : error.message) : '';
+    $('login-msg').textContent = 'Unlocking…';
+    const {error} = await sb.auth.signInWithPassword({email: C.ownerEmail, password: $('ppass').value});
+    $('login-msg').textContent = error ? (error.message === 'Invalid login credentials' ? 'Wrong password.' : error.message) : '';
+    if (!error) $('ppass').value = '';
   });
-  $('use-email').addEventListener('click', () => { $('login-pass').hidden = true; $('login-email').hidden = false; $('email').value = $('pemail').value; $('login-msg').textContent = ''; });
-  $('use-pass').addEventListener('click', () => { $('login-email').hidden = true; $('login-pass').hidden = false; $('login-msg').textContent = ''; });
-
-  // Set a password once signed in
-  const showSetPw = (on) => { $('setpw').hidden = !on; if (on) { $('setpw-user').value = (user && user.email) || ''; $('setpw-pass').focus(); } };
-  $('setpw-open').addEventListener('click', () => showSetPw(true));
-  $('setpw-close').addEventListener('click', () => { showSetPw(false); store.set('hq_pw_later', true); });
-  $('setpw').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const {error} = await sb.auth.updateUser({password: $('setpw-pass').value, data: {has_password: true}});
-    if (error) { toast(error.message); return; }
-    $('setpw-pass').value = ''; showSetPw(false); store.set('hq_pw_set', true);
-    toast('Password saved. Sign in with it on your phone.');
-  });
+  $('signout').addEventListener('click', () => sb.auth.signOut());
 
   sb.auth.onAuthStateChange((_evt, session) => {
     const u = session ? session.user : null;
@@ -100,11 +52,7 @@
     if (same && !$('login').hidden === !user) return;
     $('login').hidden = !!user;
     $('app').hidden = !user;
-    if (user) {
-      load();
-      // Signed in by email link and no password yet: offer to set one
-      if (!(user.user_metadata || {}).has_password && !store.get('hq_pw_later')) showSetPw(true);
-    }
+    if (user) load();
   });
 
   // ---------- Data ----------
