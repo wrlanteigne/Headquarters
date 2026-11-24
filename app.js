@@ -70,8 +70,9 @@
 
   sb.auth.onAuthStateChange((_evt, session) => {
     const u = session ? session.user : null;
-    if ((u && u.id) === (user && user.id)) return;
+    const same = (u && u.id) === (user && user.id);
     user = u;
+    if (same && !$('login').hidden === !user) return;
     $('login').hidden = !!user;
     $('app').hidden = !user;
     if (user) load();
