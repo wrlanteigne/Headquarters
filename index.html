@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -62,11 +62,25 @@
     <div class="status" id="status" aria-label="Countdowns"></div>
 
     <nav class="tabs" role="tablist">
-      <button class="tab on" role="tab" data-tab="ops" aria-selected="true">Ops</button>
+      <button class="tab on" role="tab" data-tab="today" aria-selected="true">Today</button>
       <button class="tab" role="tab" data-tab="school" aria-selected="false">School</button>
+      <button class="tab" role="tab" data-tab="money" aria-selected="false">Money</button>
+      <button class="tab" role="tab" data-tab="sales" aria-selected="false">Sales</button>
+      <button class="tab" role="tab" data-tab="goals" aria-selected="false">Goals</button>
     </nav>
 
-    <section id="ops" class="view">
+    <section id="today" class="view">
+      <blockquote class="quote" id="hype"></blockquote>
+
+      <div class="panel pin" id="pinned" hidden>
+        <div class="panel-h"><h2>Do these first</h2><span class="muted small">Tap one for details</span></div>
+        <ul class="items" id="pinned-list"></ul>
+      </div>
+
+      <div class="mission" id="mission"></div>
+
+      <div class="cards" id="today-cards"></div>
+
       <div class="panel">
         <div class="panel-h">
           <h2>Your day</h2>
@@ -78,13 +92,55 @@
         <ul class="plan" id="plan"></ul>
         <p class="muted small">Missed a block? Skip it and start the next one on time. Phone in another room while you work.</p>
       </div>
+
+      <div class="panel" id="outreach">
+        <div class="panel-h"><h2>Clearform Studio today</h2><span class="muted small" id="out-week">—</span></div>
+        <p class="line">Contact <b>5</b> businesses today: <b id="out-done">0</b>/5 done</p>
+        <div class="bar"><i id="out-bar"></i></div>
+        <div class="steps" id="out-steps"></div>
+        <p class="muted small">Tap + as you go. Claude sees it too.</p>
+      </div>
+
+      <div class="panel" id="needs">
+        <div class="panel-h"><h2>Needs you</h2><span class="muted small" id="needs-count">—</span></div>
+        <ul class="items" id="needs-list"></ul>
+        <details class="more"><summary>What Claude did lately</summary><ul class="log" id="log-list"></ul></details>
+      </div>
     </section>
 
     <section id="school" class="view" hidden>
+      <div class="cards" id="school-cards"></div>
       <div class="panel">
-        <div class="panel-h"><h2>School</h2><span class="muted" id="school-left">—</span></div>
+        <div class="panel-h"><h2>Coming up</h2><span class="muted" id="school-left">—</span></div>
+        <p class="muted small">Economics 12 · RSA (BCIT POWR-0143) · missed tasks show as Late until you tick them. Econ tests need 5 school days' notice; nothing is marked Dec 19 – Jan 3.</p>
         <div id="school-list"></div>
       </div>
+    </section>
+
+    <section id="money" class="view" hidden>
+      <div class="cards" id="money-cards"></div>
+      <div class="panel"><div class="panel-h"><h2>Where it's coming from</h2></div><div id="money-sources"></div></div>
+      <div class="panel"><div class="panel-h"><h2>Meadow Park</h2><span class="muted small">$33.40/hr · 9-hour shifts</span></div><div class="cards" id="job-cards"></div><p class="muted small" id="job-note"></p></div>
+      <div class="panel"><div class="panel-h"><h2>Paycheque split</h2><span class="muted small" id="split-when">—</span></div><div id="split"></div>
+        <p class="muted small">60% to savings and 15% to the TFSA come off every cheque. Claude Max gets a flat amount each payday. Spending gets the rest.</p></div>
+      <div class="panel"><div class="panel-h"><h2>Long-term savings</h2><span class="muted small" id="bal-asof">—</span></div><div class="cards" id="save-cards"></div></div>
+      <div class="panel"><div class="panel-h"><h2>Businesses</h2><span class="muted small">ClearformSheets · Clearform Studio</span></div><div class="cards" id="biz-cards"></div><div id="biz-costs"></div></div>
+      <div class="panel"><div class="panel-h"><h2>Personal spending</h2></div><div class="cards" id="pers-cards"></div><div id="pers-planned"></div></div>
+      <div class="panel"><div class="panel-h"><h2>Investments</h2><span class="muted small" id="inv-asof">—</span></div><div class="cards" id="inv-cards"></div><div id="inv-holdings"></div></div>
+    </section>
+
+    <section id="sales" class="view" hidden>
+      <div class="panel"><div class="panel-h"><h2>This week</h2><span class="muted small">Mon–Sun</span></div><div class="cards" id="week-cards"></div>
+        <details class="more"><summary>Past weeks</summary><div id="past-weeks"></div></details></div>
+      <div class="panel"><div class="panel-h"><h2>Website clients</h2><span class="muted small">Launch $100/mo · Grow $200/mo</span></div><div class="cards" id="mrr-cards"></div><div id="clients"></div></div>
+    </section>
+
+    <section id="goals" class="view" hidden>
+      <div class="cards" id="goal-cards"></div>
+      <div class="panel"><div class="panel-h"><h2>Income vs. goal</h2></div><div class="chart" id="goal-chart"></div></div>
+      <div class="panel"><div class="panel-h"><h2>Moving to Switzerland</h2><span class="muted small">Only business profit counts: it moves with you</span></div><div class="cards" id="swiss-cards"></div></div>
+      <div class="cards" id="trip-cards"></div>
+      <p class="muted small">Goals 1 and 2 count all income, with work pay after tax. Goal 3 counts only passive income, like template sales and hosting retainers.</p>
     </section>
 
     <footer class="foot">
@@ -120,8 +176,10 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=6"></script>
-  <script src="plans.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="config.js?v=7"></script>
+  <script src="plans.js?v=7"></script>
+  <script src="calc.js?v=7"></script>
+  <script src="tabs.js?v=7"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

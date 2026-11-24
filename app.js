@@ -27,7 +27,7 @@
   // ---------- Supabase ----------
   const sb = window.supabase.createClient(C.url, C.key, {auth: {persistSession: true, autoRefreshToken: true, detectSessionInUrl: true}});
   let user = null;
-  const data = {shifts: [], tasks: [], ticks: [], countdowns: []};
+  const data = {shifts: [], tasks: [], ticks: [], countdowns: [], accounts: [], paycheques: [], income: [], costs: [], expenses: [], attention: [], outreach: [], clients: [], log: [], invest: null};
 
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.hidden = false;
@@ -57,16 +57,22 @@
 
   // ---------- Data ----------
   async function load() {
-    const from = addDays(today(), -21);
-    const [s, t, k, c] = await Promise.all([
-      sb.from('shifts').select('*').gte('date', from).order('date'),
-      sb.from('school_tasks').select('*').gte('date', from).order('date'),
-      sb.from('day_ticks').select('*').eq('date', today()),
-      sb.from('countdowns').select('*').order('at')
+    const q = (t, f) => (f ? f(sb.from(t).select('*')) : sb.from(t).select('*'));
+    const res = await Promise.all([
+      q('shifts', (x) => x.order('date')),
+      q('school_tasks', (x) => x.order('date')),
+      q('day_ticks', (x) => x.eq('date', today())),
+      q('countdowns', (x) => x.order('at')),
+      q('accounts'), q('paycheques'), q('income'), q('costs'), q('expenses'),
+      q('attention'), q('outreach'), q('clients'),
+      q('activity_log', (x) => x.order('date', {ascending: false}).limit(30)),
+      q('invest_snapshot')
     ]);
-    const err = [s, t, k, c].find((r) => r.error);
+    const err = res.find((r) => r.error);
     if (err) toast('Could not load: ' + err.error.message);
-    data.shifts = s.data || []; data.tasks = t.data || []; data.ticks = k.data || []; data.countdowns = c.data || [];
+    const v = res.map((r) => r.data || []);
+    Object.assign(data, {shifts: v[0], tasks: v[1], ticks: v[2], countdowns: v[3], accounts: v[4], paycheques: v[5], income: v[6], costs: v[7], expenses: v[8],
+      attention: v[9], outreach: v[10], clients: v[11], log: v[12], invest: v[13][0] || null});
     render();
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && user) load(); });
@@ -232,9 +238,20 @@
   document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
     document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== b.dataset.tab; });
+    store.set('hq_tab', b.dataset.tab);
+    if (user) render();
+    window.scrollTo(0, 0);
   }));
+  { const last = store.get('hq_tab'); const b = last && document.querySelector('.tab[data-tab="' + last + '"]'); if (b) b.click(); }
 
-  function render() { renderPlan(); renderSchool(); renderStatus(); }
+  function render() {
+    renderPlan(); renderSchool(); renderStatus();
+    if (window.HQ_TABS && user) {
+      let C = null;
+      try { C = window.HQ_CALC.compute(data); } catch (e) { console.error(e); }
+      if (C) window.HQ_TABS.render({D: data, C, sb, user, toast, rerender: render});
+    }
+  }
 
   // ---------- Focus mode ----------
   // State lives in localStorage so a running timer survives closing the app.
