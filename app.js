@@ -124,33 +124,29 @@
   function renderPlan() {
     const {plan, rows, t} = buildPlan();
     const next = rows.find((r) => !r.done);
-    const nextFocus = rows.find((r) => !r.done && r.mins);
+    const doneN = rows.filter((r) => r.done).length;
     $('day-kind').textContent = plan.label;
-    $('day-done').textContent = rows.filter((r) => r.done).length;
+    $('day-done').textContent = doneN;
     $('day-total').textContent = rows.length;
     $('day-bed').textContent = plan.bed;
-    $('day-bar').style.width = (rows.length ? rows.filter((r) => r.done).length / rows.length * 100 : 0) + '%';
-    const cta = $('focus-next');
-    cta.hidden = !nextFocus;
-    if (nextFocus) { $('focus-next-label').textContent = nextFocus.what; cta.onclick = () => openFocus(nextFocus, t); }
+    $('day-bar').style.width = (rows.length ? doneN / rows.length * 100 : 0) + '%';
+    // Hero: the one thing to do now
+    $('hero-time').textContent = next ? next.time : 'Done';
+    $('hero-what').textContent = next ? next.what : 'Everything’s done today.';
+    $('hero-note').textContent = next ? next.note : 'Wind down, screens off, and get to bed on time.';
+    $('focus-next').hidden = !(next && next.mins);
+    $('focus-next').onclick = () => next && openFocus(next, t);
+    $('hero-done').hidden = !next;
+    $('hero-done').onclick = () => next && setTick(t, next.key, true);
+    // Compact checklist: time and name only
     $('plan').replaceChildren(...rows.map((r) => {
-      const li = el('li', (r.done ? 'done' : '') + (r === next ? ' next' : ''));
+      const li = el('li', (r.done ? 'done' : '') + (r === next ? ' next' : '') + (r.type === 'food' ? ' food' : ''));
       const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.done; cb.setAttribute('aria-label', 'Done: ' + r.what);
       cb.addEventListener('change', () => setTick(t, r.key, cb.checked));
-      const main = el('div', 't-main');
-      const nm = el('div', 't-name');
-      if (r.type === 'food') nm.append(el('span', 'tag', 'Eat'));
-      if (r.type === 'study') nm.append(el('span', 'tag study', 'School'));
-      nm.append(document.createTextNode(r.what));
-      if (r === next) nm.append(el('span', 'now', 'Next up'));
-      main.append(nm);
-      if (r.note) main.append(el('div', 't-meta', r.note));
-      li.append(cb, el('div', 't-time', r.time), main);
-      if (!r.done && r.mins) {
-        const fb = el('button', 'btn mini', 'Focus'); fb.type = 'button';
-        fb.addEventListener('click', () => openFocus(r, t));
-        li.append(fb);
-      }
+      const lab = el('label', 't-main');
+      lab.append(el('span', 't-time', r.time), el('span', 't-name', r.what));
+      lab.addEventListener('click', (e) => { e.preventDefault(); cb.checked = !cb.checked; setTick(t, r.key, cb.checked); });
+      li.append(cb, lab);
       return li;
     }));
   }
@@ -215,8 +211,9 @@
     else if (ns) items.push({k: 'Next shift', v: dayName(ns.date)});
     const pd = nextPayday();
     items.push({k: 'Payday', v: ymd(pd) === today() ? 'Today' : dayName(ymd(pd))});
-    items.sort((a, b) => (a.ms ?? 9e15) - (b.ms ?? 9e15));
-    $('status').replaceChildren(...items.map((i) => {
+    const cds = items.filter((i) => i.ms != null).sort((a, b) => a.ms - b.ms).slice(0, 1);
+    const shown = cds.concat(items.filter((i) => i.ms == null));
+    $('status').replaceChildren(...shown.map((i) => {
       const d = el('div', 'stat' + (i.hot ? ' hot' : ''));
       d.append(el('span', 'k', i.k), el('span', 'v', i.v || span(i.ms)));
       return d;

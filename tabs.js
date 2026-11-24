@@ -75,28 +75,22 @@
   function renderToday(ctx) {
     const C = ctx.C, D = ctx.D;
     $('hype').textContent = HYPE[Math.floor(Date.now() / 864e5) % HYPE.length];
-    $('pinned').hidden = !C.pinned.length;
-    fill('pinned-list', ...C.pinned.map((r) => needsItem(r, ctx)));
 
-    const M = C.mission;
-    const dots = el('div', 'dots'); M.last14.forEach((on) => dots.append(el('i', on ? 'on' : '')));
-    const m1 = el('div', 'm'); m1.append(el('div', 'k', 'January needs'), el('div', 'mv', M.janClients + ' Grow client' + (M.janClients === 1 ? '' : 's')), el('div', 'n', money(M.janBiz) + ' from websites on top of shifts'));
-    const m2 = el('div', 'm'); m2.append(el('div', 'k', 'Outreach streak'), el('div', 'mv', M.streak + ' day' + (M.streak === 1 ? '' : 's')), dots);
-    const m3 = el('div', 'm'); m3.append(el('div', 'k', 'Move to Switzerland'), el('div', 'mv', M.moveClients + ' Grow clients'), el('div', 'n', 'to reach $5,000/mo profit'));
-    fill('mission', m1, m2, m3);
+    // Needs you: top 3, rest behind "Show all"
+    const top = C.open.slice(0, 3), rest = C.open.slice(3);
+    $('needs-count').textContent = C.open.length ? C.open.length + ' open' : '';
+    fill('needs-list', ...(top.length ? top.map((r) => needsItem(r, ctx)) : [el('li', 'muted', 'Nothing needs you. Nice.')]));
+    $('needs-more-wrap').hidden = !rest.length;
+    $('needs-more').textContent = 'Show ' + rest.length + ' more';
+    fill('needs-rest', ...rest.map((r) => needsItem(r, ctx)));
 
-    const g1 = C.goalProgress[0];
-    fill('today-cards',
-      card('Income this month', money(C.thisMonthIncome), 'On track for ' + money(C.projectedMonth)),
-      card('Goal: $5,000/mo', pct(g1.pct), null, {bar: g1.pct}),
-      card('School tasks done', C.school.done + ' / ' + C.school.total, C.school.behind ? C.school.behind + ' late' : 'None late', {bar: C.school.total ? C.school.done / C.school.total * 100 : 0, hot: C.school.behind > 0}),
-      card('Next test', C.school.nextTest ? day(C.school.nextTest.date) : '—', C.school.nextTest ? C.school.nextTest.task : ''));
-
+    // Outreach
     const o = C.todayOut;
     $('out-done').textContent = o.contacted;
-    $('out-bar').style.width = Math.min(100, o.contacted / C.G.DAILY_CONTACT * 100) + '%';
-    $('out-week').textContent = C.week.contacted + ' of ' + C.G.SALES_TARGETS.contacted + ' contacted this week';
-    fill('out-steps', ...[['contacted', 'Contacted'], ['replies', 'Replies'], ['previews', 'Previews'], ['signed', 'Signed']].map(([k, label]) => {
+    $('out-week').textContent = C.week.contacted + ' of ' + C.G.SALES_TARGETS.contacted + ' this week';
+    $('out-minus').onclick = () => tapOut(ctx, 'contacted', -1);
+    $('out-plus').onclick = () => tapOut(ctx, 'contacted', 1);
+    fill('out-steps', ...[['replies', 'Replies'], ['previews', 'Previews'], ['signed', 'Signed']].map(([k, label]) => {
       const s = el('div', 'step');
       const minus = el('button', 'btn mini', '−'); minus.type = 'button'; minus.setAttribute('aria-label', 'One less ' + label.toLowerCase());
       const plus = el('button', 'btn mini', '+'); plus.type = 'button'; plus.setAttribute('aria-label', 'One more ' + label.toLowerCase());
@@ -104,10 +98,16 @@
       s.append(el('span', 'k', label), minus, el('b', '', String(o[k] || 0)), plus);
       return s;
     }));
-
-    $('needs-count').textContent = C.open.length + ' open · tap for details';
-    fill('needs-list', ...(C.open.length ? C.open.map((r) => needsItem(r, ctx)) : [el('li', 'muted', 'Nothing needs you. Nice.')]));
     fill('log-list', ...D.log.slice(0, 12).map((r) => { const li = el('li'); li.append(el('span', 'k', day(r.date) + ' · ' + (r.area || '')), el('div', '', r.did)); return li; }));
+  }
+
+  function renderMission(ctx) {
+    const C = ctx.C, M = C.mission;
+    const dots = el('div', 'dots'); M.last14.forEach((on) => dots.append(el('i', on ? 'on' : '')));
+    const m1 = el('div', 'm'); m1.append(el('div', 'k', 'January needs'), el('div', 'mv', M.janClients + ' Grow client' + (M.janClients === 1 ? '' : 's')), el('div', 'n', money(M.janBiz) + ' from websites on top of shifts'));
+    const m2 = el('div', 'm'); m2.append(el('div', 'k', 'Outreach streak'), el('div', 'mv', M.streak + ' day' + (M.streak === 1 ? '' : 's')), dots);
+    const m3 = el('div', 'm'); m3.append(el('div', 'k', 'Move to Switzerland'), el('div', 'mv', M.moveClients + ' Grow clients'), el('div', 'n', 'to reach $5,000/mo profit'));
+    fill('mission', m1, m2, m3);
   }
 
   function renderSchoolCards(ctx) {
@@ -211,7 +211,7 @@
       try { renderSchoolCards(ctx); } catch (e) { console.error(e); }
       try { renderMoney(ctx); } catch (e) { console.error(e); }
       try { renderSales(ctx); } catch (e) { console.error(e); }
-      try { renderGoals(ctx); } catch (e) { console.error(e); }
+      try { renderGoals(ctx); renderMission(ctx); } catch (e) { console.error(e); }
     }
   };
 })();

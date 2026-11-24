@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -55,6 +55,7 @@
       <div>
         <p class="eyebrow" id="today-label">—</p>
         <h1 id="greeting">Hello, William</h1>
+        <p class="quote" id="hype"></p>
       </div>
       <div class="clock" id="clock" aria-label="Current time">--:--:--</div>
     </header>
@@ -70,41 +71,37 @@
     </nav>
 
     <section id="today" class="view">
-      <blockquote class="quote" id="hype"></blockquote>
-
-      <div class="panel pin" id="pinned" hidden>
-        <div class="panel-h"><h2>Do these first</h2><span class="muted small">Tap one for details</span></div>
-        <ul class="items" id="pinned-list"></ul>
+      <div class="panel hero" id="hero">
+        <p class="eyebrow">Next up · <span id="hero-time">—</span></p>
+        <h2 class="hero-t" id="hero-what">—</h2>
+        <p class="hero-n" id="hero-note"></p>
+        <div class="hero-btns">
+          <button class="btn primary" id="focus-next" type="button">▶ Start focus</button>
+          <button class="btn" id="hero-done" type="button">Done</button>
+        </div>
+        <div class="bar"><i id="day-bar"></i></div>
+        <p class="hero-sub"><b id="day-done">0</b> of <b id="day-total">0</b> done · <span id="day-kind">—</span> · bed by <span id="day-bed">—</span></p>
       </div>
-
-      <div class="mission" id="mission"></div>
-
-      <div class="cards" id="today-cards"></div>
 
       <div class="panel">
-        <div class="panel-h">
-          <h2>Your day</h2>
-          <span class="muted" id="day-kind">—</span>
-        </div>
-        <p class="line"><b id="day-done">0</b> of <b id="day-total">0</b> done · eat ~<b>3,100</b> kcal · drink <b>2.25–2.5 L</b> · bed by <b id="day-bed">—</b></p>
-        <div class="bar"><i id="day-bar"></i></div>
-        <button class="btn primary focus-cta" id="focus-next" type="button">▶ Focus · <span id="focus-next-label">—</span></button>
+        <div class="panel-h"><h2>Today</h2><span class="muted small">~3,100 kcal · 2.5 L water</span></div>
         <ul class="plan" id="plan"></ul>
-        <p class="muted small">Missed a block? Skip it and start the next one on time. Phone in another room while you work.</p>
-      </div>
-
-      <div class="panel" id="outreach">
-        <div class="panel-h"><h2>Clearform Studio today</h2><span class="muted small" id="out-week">—</span></div>
-        <p class="line">Contact <b>5</b> businesses today: <b id="out-done">0</b>/5 done</p>
-        <div class="bar"><i id="out-bar"></i></div>
-        <div class="steps" id="out-steps"></div>
-        <p class="muted small">Tap + as you go. Claude sees it too.</p>
       </div>
 
       <div class="panel" id="needs">
         <div class="panel-h"><h2>Needs you</h2><span class="muted small" id="needs-count">—</span></div>
         <ul class="items" id="needs-list"></ul>
-        <details class="more"><summary>What Claude did lately</summary><ul class="log" id="log-list"></ul></details>
+        <details class="more" id="needs-more-wrap"><summary id="needs-more">Show all</summary><ul class="items" id="needs-rest"></ul></details>
+      </div>
+
+      <div class="panel out-row" id="outreach">
+        <div><h2>Outreach</h2><p class="muted small"><span id="out-week">—</span></p></div>
+        <div class="out-ctl">
+          <button class="btn mini" type="button" id="out-minus" aria-label="One less contacted">−</button>
+          <b><span id="out-done">0</span>/5</b>
+          <button class="btn mini" type="button" id="out-plus" aria-label="One more contacted">+</button>
+        </div>
+        <details class="more out-more"><summary>Replies, previews, signed</summary><div class="steps" id="out-steps"></div></details>
       </div>
     </section>
 
@@ -133,9 +130,11 @@
       <div class="panel"><div class="panel-h"><h2>This week</h2><span class="muted small">Mon–Sun</span></div><div class="cards" id="week-cards"></div>
         <details class="more"><summary>Past weeks</summary><div id="past-weeks"></div></details></div>
       <div class="panel"><div class="panel-h"><h2>Website clients</h2><span class="muted small">Launch $100/mo · Grow $200/mo</span></div><div class="cards" id="mrr-cards"></div><div id="clients"></div></div>
+      <div class="panel"><div class="panel-h"><h2>What Claude did lately</h2></div><ul class="log" id="log-list"></ul></div>
     </section>
 
     <section id="goals" class="view" hidden>
+      <div class="mission" id="mission"></div>
       <div class="cards" id="goal-cards"></div>
       <div class="panel"><div class="panel-h"><h2>Income vs. goal</h2></div><div class="chart" id="goal-chart"></div></div>
       <div class="panel"><div class="panel-h"><h2>Moving to Switzerland</h2><span class="muted small">Only business profit counts: it moves with you</span></div><div class="cards" id="swiss-cards"></div></div>
@@ -176,10 +175,10 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=7"></script>
-  <script src="plans.js?v=7"></script>
-  <script src="calc.js?v=7"></script>
-  <script src="tabs.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="config.js?v=8"></script>
+  <script src="plans.js?v=8"></script>
+  <script src="calc.js?v=8"></script>
+  <script src="tabs.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
