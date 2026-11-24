@@ -45,14 +45,25 @@
     if (error) { $('login-msg').textContent = error.message; return; }
     pendingEmail = email; store.set('hq_email', email);
     $('login-email').hidden = true; $('login-code').hidden = false;
-    $('login-msg').textContent = 'Check your email. Type the code here, or tap the link if you are in a browser.';
+    $('login-msg').textContent = 'Email sent. It can take a minute.';
     $('code').focus();
   });
   $('login-code').addEventListener('submit', async (e) => {
     e.preventDefault();
     $('login-msg').textContent = 'Checking…';
-    const {error} = await sb.auth.verifyOtp({email: pendingEmail, token: $('code').value.trim(), type: 'email'});
-    if (error) $('login-msg').textContent = error.message;
+    const v = $('code').value.trim();
+    let res;
+    if (/^https?:\/\//.test(v)) {
+      // A pasted sign-in link: use its token, so signing in works inside the home-screen app too
+      let u; try { u = new URL(v); } catch (err) { $('login-msg').textContent = 'That link looks broken. Copy it again.'; return; }
+      const token = u.searchParams.get('token') || u.searchParams.get('token_hash');
+      const type = u.searchParams.get('type') === 'signup' ? 'signup' : 'email';
+      if (!token) { $('login-msg').textContent = 'That link has no sign-in token. Copy the link from the button in the email.'; return; }
+      res = await sb.auth.verifyOtp({token_hash: token, type});
+    } else {
+      res = await sb.auth.verifyOtp({email: pendingEmail, token: v, type: 'email'});
+    }
+    if (res.error) $('login-msg').textContent = res.error.message;
   });
   $('login-back').addEventListener('click', () => { $('login-code').hidden = true; $('login-email').hidden = false; $('login-msg').textContent = ''; });
   $('signout').addEventListener('click', () => sb.auth.signOut());

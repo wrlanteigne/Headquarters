@@ -42,11 +42,12 @@
       <form id="login-email">
         <label for="email">Email</label>
         <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
-        <button class="btn primary" type="submit">Send code</button>
+        <button class="btn primary" type="submit">Send sign-in email</button>
       </form>
       <form id="login-code" hidden>
-        <label for="code">Code from the email</label>
-        <input id="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" required placeholder="123456">
+        <label for="code">Sign-in link or code from the email</label>
+        <input id="code" autocomplete="one-time-code" required placeholder="Paste the link here">
+        <p class="muted small">In the email, press and hold the sign-in button, tap Copy Link, then paste it here. On a computer you can just click the button in the email.</p>
         <button class="btn primary" type="submit">Sign in</button>
         <button class="btn ghost" type="button" id="login-back">Use a different email</button>
       </form>
