@@ -68,6 +68,31 @@
   $('login-back').addEventListener('click', () => { $('login-code').hidden = true; $('login-email').hidden = false; $('login-msg').textContent = ''; });
   $('signout').addEventListener('click', () => sb.auth.signOut());
 
+  // Email + password: the everyday way in, no emails needed
+  $('pemail').value = pendingEmail;
+  $('login-pass').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('login-msg').textContent = 'Signing in…';
+    const email = $('pemail').value.trim();
+    store.set('hq_email', email);
+    const {error} = await sb.auth.signInWithPassword({email, password: $('ppass').value});
+    $('login-msg').textContent = error ? (error.message === 'Invalid login credentials' ? 'Wrong email or password. No password set yet? Use the email link once, then tap Set password.' : error.message) : '';
+  });
+  $('use-email').addEventListener('click', () => { $('login-pass').hidden = true; $('login-email').hidden = false; $('email').value = $('pemail').value; $('login-msg').textContent = ''; });
+  $('use-pass').addEventListener('click', () => { $('login-email').hidden = true; $('login-pass').hidden = false; $('login-msg').textContent = ''; });
+
+  // Set a password once signed in
+  const showSetPw = (on) => { $('setpw').hidden = !on; if (on) { $('setpw-user').value = (user && user.email) || ''; $('setpw-pass').focus(); } };
+  $('setpw-open').addEventListener('click', () => showSetPw(true));
+  $('setpw-close').addEventListener('click', () => { showSetPw(false); store.set('hq_pw_later', true); });
+  $('setpw').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const {error} = await sb.auth.updateUser({password: $('setpw-pass').value, data: {has_password: true}});
+    if (error) { toast(error.message); return; }
+    $('setpw-pass').value = ''; showSetPw(false); store.set('hq_pw_set', true);
+    toast('Password saved. Sign in with it on your phone.');
+  });
+
   sb.auth.onAuthStateChange((_evt, session) => {
     const u = session ? session.user : null;
     const same = (u && u.id) === (user && user.id);
@@ -75,7 +100,11 @@
     if (same && !$('login').hidden === !user) return;
     $('login').hidden = !!user;
     $('app').hidden = !user;
-    if (user) load();
+    if (user) {
+      load();
+      // Signed in by email link and no password yet: offer to set one
+      if (!(user.user_metadata || {}).has_password && !store.get('hq_pw_later')) showSetPw(true);
+    }
   });
 
   // ---------- Data ----------
