@@ -60,7 +60,7 @@
     const q = (t, f) => (f ? f(sb.from(t).select('*')) : sb.from(t).select('*'));
     const res = await Promise.all([
       q('shifts', (x) => x.order('date')),
-      q('school_tasks', (x) => x.order('date')),
+      q('school_tasks', (x) => x.order('date').order('seq', {nullsFirst: false})),
       q('day_ticks', (x) => x.eq('date', today())),
       q('countdowns', (x) => x.order('at')),
       q('accounts'), q('paycheques'), q('income'), q('costs'), q('expenses'),
