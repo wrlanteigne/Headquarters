@@ -157,8 +157,11 @@
   async function setTask(id, on) {
     const r = data.tasks.find((x) => x.id === id); if (!r) return;
     r.done = on; r.done_at = on ? new Date().toISOString() : null;
+    const patch = {done: on, done_at: r.done_at};
+    // Done ahead of plan: it counts for today, so later days keep their order
+    if (on && r.date > today()) { r.date = today(); patch.date = r.date; }
     render();
-    const {error} = await sb.from('school_tasks').update({done: on, done_at: r.done_at}).eq('id', id);
+    const {error} = await sb.from('school_tasks').update(patch).eq('id', id);
     if (error) { toast('That tick wasn’t saved. Try again.'); load(); }
   }
   function renderSchool() {
