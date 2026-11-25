@@ -97,13 +97,15 @@
     const done = new Set(data.ticks.filter((r) => r.done).map((r) => r.key));
     let items = PLANS[kind].items;
     if (kind === 'shift' && !tasks.length) items = items.filter((i) => i.type !== 'study');
-    const blocks = items.filter((i) => i.type === 'study').length;
-    const cut = blocks > 1 ? Math.ceil(tasks.length / 2) : tasks.length;
+    // Spread today's school tasks evenly over the school blocks, in order
+    const studyKeys = items.filter((i) => i.type === 'study').map((i) => i.key);
+    const per = Math.ceil(tasks.length / Math.max(1, studyKeys.length));
     const rows = items.map((i) => {
       let note = i.note, time = i.time;
       if (i.type === 'study') {
-        const mine = i.key === 'study1' ? tasks.slice(0, cut) : tasks.slice(cut);
-        const list = mine.length ? mine.join(' · ') : (tasks.length ? 'Finish what block 1 didn’t.' : 'No school tasks today: review Economics.');
+        const n = studyKeys.indexOf(i.key);
+        const mine = tasks.slice(n * per, (n + 1) * per);
+        const list = mine.length ? mine.join(' · ') : (tasks.length ? 'Finish what the earlier blocks didn’t, then start tomorrow’s Economics.' : 'No school tasks today: get ahead on the next Economics lesson.');
         note = (note ? note + ' ' : '') + list;
       }
       if (i.key === 'work' && shift && shift.start_time && shift.end_time) time = shift.start_time + '–' + shift.end_time;
