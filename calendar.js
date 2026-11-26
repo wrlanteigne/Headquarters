@@ -165,7 +165,7 @@
     return list;
   }
   function draw() {
-    const root = $('cal-root'); if (!root || !ctx) return;
+    const root = $('cal-root'); if (!root || !ctx || (S.drag && S.drag.started)) return;
     const n = days(), today = ymd(new Date());
     const out = [];
     // Header
@@ -208,8 +208,11 @@
     inner.append(gut);
     for (let i = 0; i < n; i++) {
       const d = addDays(S.start, i), col = el('div', 'cal-col' + (ymd(d) === today ? ' today' : ''));
+      col.dataset.i = i;
+      slotDrag(col, d);
       col.addEventListener('click', (ev) => {
         if (ev.target !== col) return;
+        if (col._dragged) { col._dragged = false; return; }
         const y = ev.offsetY; const mins = Math.floor((y / ROW) * 2) * 30 + H0 * 60;
         const s = new Date(d); s.setHours(0, mins, 0, 0);
         form(null, {start: s, end: new Date(s.getTime() + 3600000)});
@@ -221,7 +224,8 @@
         b.style.top = top + 'px'; b.style.height = h + 'px'; b.style.left = (e._lane / e._lanes * 100) + '%'; b.style.width = (100 / e._lanes) + '%';
         b.style.setProperty('--c', colorOf(e));
         b.append(el('b', '', e.title), el('span', '', hm(e.orig.start) + (h >= 34 ? ' – ' + hm(e.orig.end) : '')));
-        b.addEventListener('click', () => (e.hq ? hqInfo(e.orig) : form(e.orig)));
+        b.addEventListener('click', () => { if (b._dragged) { b._dragged = false; return; } if (e.hq) hqInfo(e.orig); else form(e.orig); });
+        if (!e.hq && e.orig.cal && e.orig.cal.write) eventDrag(b, e.orig, i);
         col.append(b);
       });
       if (ymd(d) === today) { const now = new Date(); const ln = el('div', 'now-line'); ln.style.top = ((now.getHours() + now.getMinutes() / 60) - H0) * ROW + 'px'; col.append(ln); }
@@ -229,10 +233,101 @@
     }
     body.append(inner); grid.append(body);
     out.push(grid);
-    out.push(el('p', 'muted small', 'Click an empty slot to add an event, or double-click the all-day row. Click an event to change or delete it. Shifts, school, follow-ups and countdowns come from HQ.' + (S.busy ? ' Loading…' : '')));
+    out.push(el('p', 'muted small', (window.matchMedia('(pointer: coarse)').matches ? 'Tap an empty slot to add an event. Hold an event, then drag to move it, or drag its bottom edge to change the end. ' : 'Click or drag across an empty slot to add an event. Drag an event to move it, or drag its bottom edge to change the end. ') + 'Tap an event to edit it. Shifts, school, follow-ups and countdowns come from HQ.' + (S.busy ? ' Loading…' : '')));
     const keepScroll = root.querySelector('.cal-body'); const st = keepScroll ? keepScroll.scrollTop : null;
     root.replaceChildren(...out);
     body.scrollTop = st != null ? st : 7 * ROW;
+  }
+
+  // ---------- Dragging ----------
+  // Drag an event to move it (any day, 15-minute steps); drag its bottom edge to change the end.
+  // Drag across an empty slot to make an event that long. On a phone, hold an event for a moment first.
+  const SNAP = 15;
+  const snap = (mins) => Math.round(mins / SNAP) * SNAP;
+  const colAt = (x, y) => document.elementsFromPoint(x, y).find((n) => n.classList && n.classList.contains('cal-col'));
+  function holdScroll(on) { const b = document.querySelector('.cal-body'); if (b) b.style.touchAction = on ? 'none' : ''; }
+  document.addEventListener('touchmove', (e) => { if (S.drag && S.drag.started) e.preventDefault(); }, {passive: false});
+
+  function eventDrag(b, ev, i0) {
+    const rs = el('span', 'ev-rs'); rs.setAttribute('aria-hidden', 'true'); b.append(rs);
+    b.addEventListener('pointerdown', (pe) => {
+      if (pe.button !== 0) return;
+      const st = {mode: pe.target === rs ? 'resize' : 'move', x: pe.clientX, y: pe.clientY, started: false, days: 0, mins: 0, touch: pe.pointerType !== 'mouse'};
+      const label = b.querySelector('span:not(.ev-rs)');
+      const begin = () => { st.started = true; S.drag = st; b.classList.add('dragging'); holdScroll(true); try { b.setPointerCapture(pe.pointerId); } catch (x) { /* ignore */ } if (navigator.vibrate) try { navigator.vibrate(10); } catch (x) { /* ignore */ } };
+      if (st.touch) st.timer = setTimeout(begin, 300);
+      const times = () => {
+        const s0 = new Date(ev.start.getTime() + st.days * 864e5 + (st.mode === 'move' ? st.mins * 60000 : 0));
+        let e0 = new Date(ev.end.getTime() + st.days * 864e5 + st.mins * 60000);
+        if (e0 - s0 < SNAP * 60000) e0 = new Date(s0.getTime() + SNAP * 60000);
+        return [s0, e0];
+      };
+      const move = (m) => {
+        const dx = m.clientX - st.x, dy = m.clientY - st.y;
+        if (!st.started) {
+          if (st.touch) { if (Math.abs(dx) + Math.abs(dy) > 10) end(); return; }
+          if (Math.abs(dx) + Math.abs(dy) < 5) return;
+          begin();
+        }
+        m.preventDefault();
+        st.mins = snap(dy / ROW * 60);
+        if (st.mode === 'move') { const c = colAt(m.clientX, m.clientY); if (c) { st.days = +c.dataset.i - i0; if (b.parentNode !== c) c.append(b); } }
+        const [s0, e0] = times();
+        const day0 = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate());
+        b.style.left = '0'; b.style.width = '100%';
+        b.style.top = ((s0 - day0) / 3600000 - H0) * ROW + 'px';
+        b.style.height = Math.max(20, (e0 - s0) / 3600000 * ROW - 2) + 'px';
+        if (label) label.textContent = hm(s0) + ' – ' + hm(e0);
+      };
+      const up = async () => {
+        const was = st.started; end();
+        if (!was) return;
+        b._dragged = true; setTimeout(() => { b._dragged = false; }, 400);
+        if (!st.mins && !st.days) { draw(); return; }
+        const [s0, e0] = times();
+        const old = [ev.start, ev.end];
+        ev.start = s0; ev.end = e0; draw();
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        try {
+          await g().fetch(CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none'), {method: 'PATCH', body: JSON.stringify({start: {dateTime: s0.toISOString(), timeZone: tz}, end: {dateTime: e0.toISOString(), timeZone: tz}})});
+          const n = ev.start.toLocaleDateString('en-CA', {weekday: 'short'}) + ' ' + hm(ev.start) + '–' + hm(ev.end);
+          ctx.toast(ev.title + ' → ' + n + (ev.attendees.length ? '. Guests were told.' : ''));
+        } catch (err) { ev.start = old[0]; ev.end = old[1]; draw(); ctx.toast(err.message === 'signin' ? 'Reconnect Google, then try again.' : 'Couldn’t move it: ' + err.message); }
+      };
+      function end() { clearTimeout(st.timer); S.drag = null; holdScroll(false); b.classList.remove('dragging'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); }
+      const cancel = () => { const was = st.started; end(); if (was) draw(); };
+      window.addEventListener('pointermove', move, {passive: false});
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', cancel);
+    });
+    b.addEventListener('contextmenu', (e) => { if (S.drag) e.preventDefault(); });
+  }
+
+  function slotDrag(col, d) {
+    col.addEventListener('pointerdown', (pe) => {
+      if (pe.target !== col || pe.button !== 0 || pe.pointerType !== 'mouse') return;
+      if (!g() || !g().connected()) return;
+      const rect = col.getBoundingClientRect();
+      const at = (y) => Math.max(0, Math.min(24 * 60, snap((y - rect.top) / ROW * 60) + H0 * 60));
+      const a = Math.floor(((pe.clientY - rect.top) / ROW * 60) / SNAP) * SNAP + H0 * 60;
+      let b = a, ghost = null;
+      const move = (m) => {
+        b = at(m.clientY);
+        if (Math.abs(b - a) < SNAP) return;
+        if (!ghost) { ghost = el('div', 'ev ghost'); col.append(ghost); }
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        ghost.style.top = (lo / 60 - H0) * ROW + 'px'; ghost.style.height = (hi - lo) / 60 * ROW + 'px';
+        ghost.textContent = hm(new Date(d.getTime() + lo * 60000)) + ' – ' + hm(new Date(d.getTime() + hi * 60000));
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+        if (!ghost) return;
+        ghost.remove(); col._dragged = true; setTimeout(() => { col._dragged = false; }, 400);
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        form(null, {start: new Date(d.getTime() + lo * 60000), end: new Date(d.getTime() + hi * 60000)});
+      };
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+    });
   }
 
   window.HQ_CAL = {
