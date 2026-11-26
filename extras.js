@@ -204,114 +204,6 @@
   }
 
   // =========================================================
-  // DOCS
-  // =========================================================
-  const SPACES = ['Clearform Studio', 'ClearformSheets', 'School', 'Personal'];
-  const TEMPLATES = [
-    ['Blank', '', ''],
-    ['Meeting notes', 'Meeting notes', 'Date:\nWith:\n\nWhat we talked about\n- \n\nDecisions\n- \n\nNext steps\n- [ ] '],
-    ['Website brief', 'Website brief: ', 'Business:\nContact:\nPhone / email:\nCurrent site:\n\nWhat they do\n\nPages they need\n- Home\n- Services\n- About\n- Contact\n\nPhotos / logo:\nColours they like:\nPlan: Launch $100/mo · Grow $200/mo\nDeadline:'],
-    ['Call script', 'Call script', 'Hi, is this the owner? My name is William, I build websites for trades around Whistler and Squamish.\n\nQuick question: \n\nIf they say yes →\nIf they say not interested →'],
-    ['Weekly review', 'Week of ', 'Wins\n- \n\nWhat didn’t work\n- \n\nMoney this week:\nOutreach: contacted __ · replies __ · previews __ · signed __\n\nNext week’s top 3\n1. \n2. \n3. ']
-  ];
-  const CLAUDE_DOCS = [
-    ['Clearform Studio – Sales Playbook', 'https://claude.ai/artifact/PTgUm4FpZTiEcWeKxtdVnw', 'Clearform Studio'],
-    ['Clearform Studio: How a Sale Works', 'https://claude.ai/artifact/DQnj8chiM4jjCWu3Qmgp9T', 'Clearform Studio'],
-    ['Selling Websites to Whistler Businesses', 'https://claude.ai/artifact/T2mUWLH6yKQBkd2VMJkynx', 'Clearform Studio'],
-    ['Trades Lead Tracker (sheet)', 'https://claude.ai/artifact/NCCZ9qKpdg69prrsFpgHRZ', 'Clearform Studio'],
-    ['50 Call List (sheet)', 'https://claude.ai/artifact/Y6zU6yMrwD8WCDEYUvzRqg', 'Clearform Studio'],
-    ['Etsy shop stats', 'https://claude.ai/artifact/WpC2MAUbV6Fwqp9wLsgccp', 'ClearformSheets'],
-    ['Startup research: Money Leaks', 'https://claude.ai/artifact/GBxoLsi6ZrnaMHt9FBryGd', 'Personal'],
-    ['Automated Invoice Intelligence', 'https://claude.ai/artifact/Ra5seyt2aEr83DtBT3s4sG', 'Personal'],
-    ['Size & Strength Plan', 'https://claude.ai/artifact/L2JCw1kFR2NZjievLyxU4c', 'Personal']
-  ];
-  const DS = {space: 'All', q: '', archived: false};
-  function docs() {
-    const box = $('docs-root'); if (!box) return;
-    const all = ctx.D.docs || [];
-    const out = [];
-    const head = el('div', 'page-h'); head.append(el('h2', 'big', 'Docs'), btn('＋ New', 'primary', () => newDoc(TEMPLATES[0])));
-    out.push(head);
-    const tabs = el('div', 'utabs');
-    ['All'].concat(SPACES).forEach((s) => { const b = el('button', DS.space === s ? 'on' : '', s); b.type = 'button'; b.addEventListener('click', () => { DS.space = s; docs(); }); tabs.append(b); });
-    out.push(tabs);
-    const bar = el('div', 'hrow');
-    const s = el('input', 'mail-search'); s.type = 'search'; s.placeholder = 'Search titles and text'; s.value = DS.q; s.setAttribute('aria-label', 'Search docs');
-    s.addEventListener('input', () => { DS.q = s.value; docs(); const n = $('docs-root').querySelector('.mail-search'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
-    const ar = el('button', 'chip' + (DS.archived ? ' on' : ''), '🗄 Archived'); ar.type = 'button'; ar.addEventListener('click', () => { DS.archived = !DS.archived; docs(); });
-    bar.append(s, ar); out.push(bar);
-    if (!DS.archived && !DS.q) {
-      out.push(el('p', 'mgroup', 'Start a new document'));
-      const tpl = el('div', 'tpls');
-      TEMPLATES.forEach((t) => { const b = el('button', 'tpl'); b.type = 'button'; b.append(el('span', 'tpl-i', t[0] === 'Blank' ? '+' : '≡'), el('span', '', t[0])); b.addEventListener('click', () => newDoc(t)); tpl.append(b); });
-      out.push(tpl);
-    }
-    const q = DS.q.toLowerCase();
-    const list = all.filter((d) => d.archived === DS.archived && (DS.space === 'All' || d.workspace === DS.space) && (!q || (d.title + ' ' + d.body).toLowerCase().includes(q))).sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
-    const lh = el('div', 'panel-h'); lh.append(el('p', 'mgroup', (DS.space === 'All' ? 'All' : DS.space) + (DS.archived ? ' · archived' : ' documents')), el('span', 'muted small', list.length + ' doc' + (list.length === 1 ? '' : 's')));
-    out.push(lh);
-    const ul = el('ul', 'doclist');
-    if (!list.length) ul.append(el('li', 'muted empty', DS.q ? 'No docs match.' : 'No docs here yet.'));
-    list.forEach((d) => {
-      const li = el('li'); const b = el('button', 'docrow'); b.type = 'button';
-      const m = el('div', 'grow'); m.append(el('b', '', d.title || 'Untitled document'), el('span', 'muted small', (d.body || '').split('\n').find((x) => x.trim()) || 'Empty'));
-      b.append(el('span', 'doc-i', '▤'), m, el('span', 'muted small', d.workspace), el('span', 'muted small', 'Edited ' + U.ago(d.updated_at) + (U.ago(d.updated_at) === 'now' ? '' : ' ago')));
-      b.addEventListener('click', () => openDoc(d)); li.append(b); ul.append(li);
-    });
-    out.push(ul);
-    const cl = CLAUDE_DOCS.filter((x) => DS.space === 'All' || x[2] === DS.space).filter((x) => !q || x[0].toLowerCase().includes(q));
-    if (cl.length && !DS.archived) {
-      out.push(el('p', 'mgroup', 'Made with Claude · opens in Claude'));
-      const u2 = el('ul', 'doclist');
-      cl.forEach(([t, url, sp]) => { const li = el('li'); const a = el('a', 'docrow'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; const m = el('div', 'grow'); m.append(el('b', '', t)); a.append(el('span', 'doc-i', '◆'), m, el('span', 'muted small', sp), el('span', 'muted small', '↗')); li.append(a); u2.append(li); });
-      out.push(u2);
-    }
-    box.replaceChildren(...out);
-  }
-  async function newDoc(t, space) {
-    const row = {title: t[1] ? t[1] + (/ $/.test(t[1]) ? '' : '') : 'Untitled document', body: t[2] || '', workspace: space || (DS.space === 'All' ? 'Clearform Studio' : DS.space)};
-    if (t[0] === 'Weekly review') row.title = 'Week of ' + new Date().toLocaleDateString('en-CA', {month: 'short', day: 'numeric'});
-    const {data, error} = await ctx.sb.from('docs').insert(Object.assign({user_id: ctx.user.id}, row)).select().single();
-    if (error) { ctx.toast('Couldn’t create: ' + error.message); return null; }
-    ctx.D.docs.push(data); docs(); openDoc(data, true);
-    return data;
-  }
-  function openDoc(d, fresh) {
-    const f = el('div', 'doc-ed');
-    const t = el('input', 'doc-title'); t.value = d.title; t.setAttribute('aria-label', 'Title');
-    const sp = U.field('Folder', 'workspace', 'select', null, {options: SPACES.map((s) => [s, s])}); sp.querySelector('select').value = d.workspace;
-    const body = el('textarea', 'doc-body'); body.value = d.body; body.setAttribute('aria-label', 'Document text'); body.placeholder = 'Start writing…';
-    const st = el('span', 'muted small', 'Saved');
-    const meta = el('div', 'hrow'); meta.append(sp, st);
-    f.append(t, meta, body);
-    let timer = null;
-    const persist = async () => {
-      const row = {title: t.value.trim() || 'Untitled document', body: body.value, workspace: sp.querySelector('select').value, updated_at: new Date().toISOString()};
-      st.textContent = 'Saving…';
-      const {error} = await ctx.sb.from('docs').update(row).eq('id', d.id);
-      if (error) { st.textContent = 'Not saved: ' + error.message; return; }
-      Object.assign(d, row); st.textContent = 'Saved';
-    };
-    const queue = () => { st.textContent = 'Editing…'; clearTimeout(timer); timer = setTimeout(persist, 700); };
-    [t, body].forEach((x) => x.addEventListener('input', queue)); sp.querySelector('select').addEventListener('change', queue);
-    // Tick boxes: typing "- [ ] " makes a to-do; this button flips the line the cursor is on
-    const tick = btn('☑ Tick line', 'ghost', () => {
-      const v = body.value, p = body.selectionStart, a = v.lastIndexOf('\n', p - 1) + 1, b = v.indexOf('\n', p); const line = v.slice(a, b < 0 ? v.length : b);
-      const nl = /- \[ \]/.test(line) ? line.replace('- [ ]', '- [x]') : /- \[x\]/.test(line) ? line.replace('- [x]', '- [ ]') : '- [ ] ' + line;
-      body.value = v.slice(0, a) + nl + v.slice(b < 0 ? v.length : b); body.focus(); queue();
-    });
-    const arch = btn(d.archived ? 'Unarchive' : 'Archive', 'ghost', async () => { clearTimeout(timer); await persist(); await save('docs', {archived: !d.archived}, {id: d.id}); d.archived = !d.archived; sh.close(); ctx.toast(d.archived ? 'Archived.' : 'Back in your docs.'); });
-    const mail = btn('Email it', 'ghost', () => { if (window.HQ_MAIL) window.HQ_MAIL.compose({subject: t.value, body: body.value}); });
-    const del = btn('Delete', 'ghost', async () => {
-      if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; return; }
-      clearTimeout(timer); const {error} = await ctx.sb.from('docs').delete().eq('id', d.id); if (error) { ctx.toast(error.message); return; }
-      ctx.D.docs = ctx.D.docs.filter((x) => x.id !== d.id); sh.close();
-    });
-    const sh = U.sheet(d.title || 'Document', f, {wide: true, actions: [tick, mail, arch, del], noFocus: !fresh, onClose: () => { clearTimeout(timer); persist().then(() => { if (ctx) docs(); }); }});
-    if (fresh) setTimeout(() => { t.focus(); t.select(); }, 60);
-  }
-
-  // =========================================================
   // GOALS: ideas
   // =========================================================
   function ideas() {
@@ -434,7 +326,7 @@
       ['✉', 'Email', () => window.HQ_MAIL && window.HQ_MAIL.compose()],
       ['◷', 'Event', () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); window.HQ_CAL && window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 3600000)}); }],
       ['◎', 'Lead', () => leadForm()],
-      ['▤', 'Doc', () => newDoc(TEMPLATES[0])],
+      ['▤', 'Doc', () => window.HQ_DOCS.create()],
       ['✦', 'Idea', () => simple('New idea', [U.field('Idea', 'text', 'textarea', '', {rows: 3})], (v) => v.text && addIdea(v.text))],
       ['⚑', 'Reminder', () => simple('Remind me', [U.field('What', 'title', 'text', ''), U.field('Priority', 'priority', 'select', null, {options: [['med', 'Medium'], ['high', 'High'], ['low', 'Low']]})], async (v) => {
         if (!v.title) return; const row = {id: nid('w'), priority: v.priority, area: 'Me', title: v.title.slice(0, 60), item: v.title, status: 'open'};
@@ -475,14 +367,14 @@
       {k: 'Do', t: 'Write an email', run: () => window.HQ_MAIL && window.HQ_MAIL.compose()},
       {k: 'Do', t: 'New calendar event', run: () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 3600000)}); }},
       {k: 'Do', t: 'New lead', run: () => leadForm()},
-      {k: 'Do', t: 'New doc', run: () => newDoc(TEMPLATES[0])},
+      {k: 'Do', t: 'New doc', run: () => window.HQ_DOCS.create()},
       {k: 'Do', t: 'Start a focus block', run: () => { go('today'); setTimeout(() => $('focus-next').click(), 50); }},
       {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
       {k: 'Help', t: 'How HQ works', run: guide}
     ];
     const items = () => base.concat(
       (D.leads || []).map((l) => ({k: 'Lead · ' + l.stage, t: l.business + (l.contact ? ' · ' + l.contact : ''), run: () => leadForm(l)})),
-      (D.docs || []).filter((d) => !d.archived).map((d) => ({k: 'Doc · ' + d.workspace, t: d.title, extra: d.body, run: () => openDoc(d)})),
+      (D.docs || []).filter((d) => !d.archived).map((d) => ({k: 'Doc · ' + d.workspace, t: d.title, extra: String(d.body).replace(/<[^>]+>/g, ' '), run: () => window.HQ_DOCS.open(d)})),
       (D.attention || []).filter((a) => a.status === 'open').map((a) => ({k: 'Needs you', t: a.title || a.item, extra: a.item, run: () => go('today')})),
       (D.tasks || []).filter((r) => !r.done).map((r) => ({k: 'School · ' + dayName(r.date), t: r.task, run: () => go('school')})),
       (D.clients || []).map((c) => ({k: 'Client', t: c.business, run: () => go('sales')})),
@@ -513,8 +405,9 @@
       ['Calendar', 'Your Google Calendar with Meadow Park shifts, school and follow-ups on top. Click an empty time to add an event.'],
       ['Mail', 'Your Gmail, sorted: Important first (clients, leads, school, work, money), everything else below. Read, reply, write, archive. Claude’s morning drafts wait at the top for you to check and send.'],
       ['People', 'Your sales pipeline. Every lead is a card: drag it from New → Contacted → Replied → Preview → Signed. Moving it forward counts it in your outreach.'],
-      ['Docs', 'Notes, briefs and scripts, sorted by business. Templates make a website brief or call script in one tap. Saves as you type.'],
-      ['School · Money · Goals', 'Same as before: school tasks, income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],
+      ['Docs', 'Write notes, briefs and scripts, sorted by business. Pick a template, then type / to add headings, lists or to-dos. Saves as you type, and exports to Word, PDF or email.'],
+      ['School', 'A card per course with progress and the next test, today’s tasks to tick off, and the week ahead.'],
+      ['Money · Goals', 'Income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],
       ['Automations', 'What Claude runs for you each day and everything it did lately.'],
       ['Subscriptions', 'Everything you pay for every month, business and personal.'],
       ['Shortcuts', '＋ button (bottom right): add an email, event, lead, doc, idea, reminder, gym session or spending. ⌘K (or the search box): find anything in HQ. Press ? for this guide.'],
@@ -538,7 +431,7 @@
   // Keyboard: ⌘K / Ctrl+K search, ? guide, N quick add
   document.addEventListener('keydown', (e) => {
     if (!ctx || $('app').hidden) return;
-    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); palette(); }
     else if (!typing && !document.querySelector('.sheet-back') && e.key === '?') guide();
     else if (!typing && !document.querySelector('.sheet-back') && e.key.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey) quickAdd();
@@ -547,9 +440,9 @@
   window.HQ_EXTRAS = {
     render(c) {
       ctx = c;
-      [inboxPanel, followPanel, weekStrip, pipeline, docs, ideas, automations, subscriptions, settings, status].forEach((f) => { try { f(c); } catch (e) { console.error(f.name, e); } });
+      [inboxPanel, followPanel, weekStrip, pipeline, ideas, automations, subscriptions, settings, status].forEach((f) => { try { f(c); } catch (e) { console.error(f.name, e); } });
     },
-    inboxPanel, leadForm, quickAdd, palette, guide, newDoc
+    inboxPanel, leadForm, quickAdd, palette, guide
   };
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-act]'); if (!t || !ctx) return;

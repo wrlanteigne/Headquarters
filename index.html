@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>William's HQ</title>
-  <meta name="theme-color" content="#050B18">
+  <meta name="theme-color" content="#111113">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="HQ">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -124,14 +124,7 @@
       </div>
     </section>
 
-    <section id="school" class="view" hidden>
-      <div class="cards" id="school-cards"></div>
-      <div class="panel">
-        <div class="panel-h"><h2>Coming up</h2><span class="muted" id="school-left">—</span></div>
-        <p class="muted small">Economics 12 · RSA (BCIT POWR-0143) · missed tasks show as Late until you tick them. Econ tests need 5 school days' notice; nothing is marked Dec 19 – Jan 3.</p>
-        <div id="school-list"></div>
-      </div>
-    </section>
+    <section id="school" class="view" hidden><div id="school-root"></div></section>
 
     <section id="money" class="view" hidden>
       <div class="cards" id="money-cards"></div>
@@ -205,14 +198,16 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=13"></script>
-  <script src="plans.js?v=13"></script>
-  <script src="calc.js?v=13"></script>
-  <script src="ui.js?v=13"></script>
-  <script src="tabs.js?v=13"></script>
-  <script src="mail.js?v=13"></script>
-  <script src="calendar.js?v=13"></script>
-  <script src="extras.js?v=13"></script>
-  <script src="app.js?v=13"></script>
+  <script src="config.js?v=14"></script>
+  <script src="plans.js?v=14"></script>
+  <script src="calc.js?v=14"></script>
+  <script src="ui.js?v=14"></script>
+  <script src="tabs.js?v=14"></script>
+  <script src="mail.js?v=14"></script>
+  <script src="calendar.js?v=14"></script>
+  <script src="docs.js?v=14"></script>
+  <script src="school.js?v=14"></script>
+  <script src="extras.js?v=14"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

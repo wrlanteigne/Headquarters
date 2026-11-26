@@ -21,7 +21,7 @@
   const setting = (k) => { const r = ctx && (ctx.D.settings || []).find((s) => s.key === k); return r ? r.value : null; };
 
   // Layers that come from HQ itself (always available, even without Google)
-  const LAYERS = [['shifts', 'Meadow Park', '#FFD27A'], ['school', 'School', '#B9A6FF'], ['follow', 'Follow-ups', '#7EE0B0'], ['dates', 'Countdowns', '#FF9A8A']];
+  const LAYERS = [['shifts', 'Meadow Park', '#D97706'], ['school', 'School', '#7C3AED'], ['follow', 'Follow-ups', '#059669'], ['dates', 'Countdowns', '#DC2626']];
   function layerOn(k) { const v = setting('cal_layers_off') || []; return !v.includes(k); }
 
   async function saveSetting(key, value) {
@@ -41,7 +41,7 @@
     try {
       if (!S.cals.length) {
         const r = await g().fetch(CAL + 'users/me/calendarList?maxResults=50');
-        S.cals = (r.items || []).filter((c) => !c.hidden).map((c) => ({id: c.id, name: c.summaryOverride || c.summary, color: c.backgroundColor || '#8FE3FF', write: /owner|writer/.test(c.accessRole), primary: !!c.primary}));
+        S.cals = (r.items || []).filter((c) => !c.hidden).map((c) => ({id: c.id, name: c.summaryOverride || c.summary, color: c.backgroundColor || '#2563EB', write: /owner|writer/.test(c.accessRole), primary: !!c.primary}));
       }
       const off = setting('cal_off') || [];
       const lists = await Promise.all(S.cals.filter((c) => !off.includes(c.id)).map(async (c) => {

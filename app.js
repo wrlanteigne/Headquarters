@@ -171,35 +171,7 @@
     const {error} = await sb.from('school_tasks').update(patch).eq('id', id);
     if (error) { toast('That tick wasn’t saved. Try again.'); load(); }
   }
-  function renderSchool() {
-    const t = today();
-    const list = data.tasks.filter((r) => r.date >= t || !r.done);
-    $('school-left').textContent = list.filter((r) => !r.done).length + ' to do';
-    const days = [...new Set(list.map((r) => (r.date < t ? t : r.date)))].sort();
-    const out = [];
-    days.forEach((d) => {
-      out.push(el('p', 'day-h' + (d === t ? ' today' : ''), dayName(d)));
-      const ul = el('ul', 'tasks');
-      list.filter((r) => (r.date < t ? t : r.date) === d).forEach((r) => {
-        const li = el('li', r.done ? 'done' : '');
-        const cb = el('input'); cb.type = 'checkbox'; cb.checked = r.done; cb.setAttribute('aria-label', 'Done: ' + r.task);
-        cb.addEventListener('change', () => setTask(r.id, cb.checked));
-        const main = el('div', 't-main');
-        const nm = el('div', 't-name');
-        if (r.date < t) nm.append(el('span', 'tag late', 'Late'));
-        if (r.kind) nm.append(el('span', 'tag ' + r.kind, r.kind));
-        nm.append(document.createTextNode(r.task));
-        main.append(nm);
-        const meta = [r.unit, r.note].filter(Boolean).join(' · ');
-        if (meta) main.append(el('div', 't-meta', meta));
-        li.append(cb, main);
-        ul.append(li);
-      });
-      out.push(ul);
-    });
-    if (!out.length) out.push(el('p', 'muted', 'Nothing left. Nice.'));
-    $('school-list').replaceChildren(...out);
-  }
+  function renderSchool() { /* drawn by school.js */ }
 
   // ---------- Status bar ----------
   function span(ms) {
@@ -261,7 +233,7 @@
       try { C = window.HQ_CALC.compute(data); } catch (e) { console.error(e); }
       const ctx = {D: data, C, sb, user, toast, rerender: render};
       if (C) window.HQ_TABS.render(ctx);
-      [window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
+      [window.HQ_SCHOOL, window.HQ_DOCS, window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
     }
   }
 
