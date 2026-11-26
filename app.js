@@ -27,7 +27,7 @@
   // ---------- Supabase ----------
   const sb = window.supabase.createClient(C.url, C.key, {auth: {persistSession: true, autoRefreshToken: true, detectSessionInUrl: true}});
   let user = null;
-  const data = {shifts: [], tasks: [], ticks: [], countdowns: [], accounts: [], paycheques: [], income: [], costs: [], expenses: [], attention: [], outreach: [], clients: [], log: [], invest: null};
+  const data = {shifts: [], tasks: [], ticks: [], countdowns: [], accounts: [], paycheques: [], income: [], costs: [], expenses: [], attention: [], outreach: [], clients: [], log: [], invest: null, leads: [], docs: [], notes: [], settings: [], gym: [], focus: []};
 
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.hidden = false;
@@ -66,13 +66,20 @@
       q('accounts'), q('paycheques'), q('income'), q('costs'), q('expenses'),
       q('attention'), q('outreach'), q('clients'),
       q('activity_log', (x) => x.order('date', {ascending: false}).limit(30)),
-      q('invest_snapshot')
+      q('invest_snapshot'),
+      q('leads', (x) => x.order('updated_at', {ascending: false})),
+      q('docs', (x) => x.order('updated_at', {ascending: false})),
+      q('notes', (x) => x.order('created_at', {ascending: false})),
+      q('settings'),
+      q('gym', (x) => x.gte('date', addDays(today(), -60)).order('date')),
+      q('focus_sessions', (x) => x.gte('date', addDays(today(), -14)))
     ]);
     const err = res.find((r) => r.error);
     if (err) toast('Could not load: ' + err.error.message);
     const v = res.map((r) => r.data || []);
     Object.assign(data, {shifts: v[0], tasks: v[1], ticks: v[2], countdowns: v[3], accounts: v[4], paycheques: v[5], income: v[6], costs: v[7], expenses: v[8],
-      attention: v[9], outreach: v[10], clients: v[11], log: v[12], invest: v[13][0] || null});
+      attention: v[9], outreach: v[10], clients: v[11], log: v[12], invest: v[13][0] || null,
+      leads: v[14], docs: v[15], notes: v[16], settings: v[17], gym: v[18], focus: v[19]});
     render();
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && user) load(); });
@@ -241,6 +248,7 @@
     document.querySelectorAll('.tab').forEach((x) => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
     document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== b.dataset.tab; });
     store.set('hq_tab', b.dataset.tab);
+    document.body.dataset.view = b.dataset.tab;
     if (user) render();
     window.scrollTo(0, 0);
   }));
@@ -251,7 +259,9 @@
     if (window.HQ_TABS && user) {
       let C = null;
       try { C = window.HQ_CALC.compute(data); } catch (e) { console.error(e); }
-      if (C) window.HQ_TABS.render({D: data, C, sb, user, toast, rerender: render});
+      const ctx = {D: data, C, sb, user, toast, rerender: render};
+      if (C) window.HQ_TABS.render(ctx);
+      [window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
     }
   }
 

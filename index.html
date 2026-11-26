@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -23,8 +23,8 @@
       <li>› Syncing Meadow Park shifts</li>
       <li>› Loading school plan</li>
       <li>› Reading accounts and TFSA</li>
-      <li>› Pulling Etsy and Stripe</li>
-      <li>› Scanning the Clearform pipeline</li>
+      <li>› Pulling Etsy, Stripe and Gmail</li>
+      <li>› Scanning the pipeline and calendar</li>
       <li>› Checking what needs you</li>
       <li>› Loading gym, food and French</li>
       <li>› Building today's plan</li>
@@ -51,6 +51,24 @@
 
   <!-- The app -->
   <div class="app" id="app" hidden>
+    <aside class="side">
+      <div class="brand"><span class="logo" aria-hidden="true">HQ</span><div><b>William's HQ</b><span>Whistler, BC</span></div></div>
+      <button class="side-search" type="button" data-act="search"><span>Search…</span><kbd>⌘K</kbd></button>
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <span class="nav-g">Overview</span>
+        <button class="tab on" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Today</span></button><button class="tab" role="tab" data-tab="goals" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></svg><span>Goals</span></button>
+        <span class="nav-g">Comms</span>
+        <button class="tab" role="tab" data-tab="mail" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Mail</span></button><button class="tab" role="tab" data-tab="calendar" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Calendar</span></button>
+        <span class="nav-g">Work</span>
+        <button class="tab" role="tab" data-tab="sales" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/></svg><span>People</span></button><button class="tab" role="tab" data-tab="docs" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg><span>Docs</span></button><button class="tab" role="tab" data-tab="school" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg><span>School</span></button>
+        <span class="nav-g">Money</span>
+        <button class="tab" role="tab" data-tab="money" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><span>Money</span></button><button class="tab" role="tab" data-tab="subs" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Subscriptions</span></button>
+        <span class="nav-g">System</span>
+        <button class="tab" role="tab" data-tab="automations" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Automations</span></button><button class="tab" role="tab" data-tab="settings" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
+      </nav>
+      <div class="side-foot"><span class="engine" id="engine">—</span><button class="link" type="button" data-act="guide" aria-label="How HQ works">?</button></div>
+    </aside>
+    <div class="main">
     <header class="top">
       <div>
         <p class="eyebrow" id="today-label">—</p>
@@ -62,13 +80,7 @@
 
     <div class="status" id="status" aria-label="Countdowns"></div>
 
-    <nav class="tabs" role="tablist">
-      <button class="tab on" role="tab" data-tab="today" aria-selected="true">Today</button>
-      <button class="tab" role="tab" data-tab="school" aria-selected="false">School</button>
-      <button class="tab" role="tab" data-tab="money" aria-selected="false">Money</button>
-      <button class="tab" role="tab" data-tab="sales" aria-selected="false">Sales</button>
-      <button class="tab" role="tab" data-tab="goals" aria-selected="false">Goals</button>
-    </nav>
+    
 
     <section id="today" class="view">
       <div class="panel hero" id="hero">
@@ -82,6 +94,13 @@
         <div class="bar"><i id="day-bar"></i></div>
         <p class="hero-sub"><b id="day-done">0</b> of <b id="day-total">0</b> done · <span id="day-kind">—</span> · bed by <span id="day-bed">—</span></p>
       </div>
+
+      <div class="week-strip" id="week-strip" aria-label="This week"></div>
+      <div class="two-col">
+        <div class="panel" id="today-inbox"></div>
+        <div class="panel" id="today-cal" hidden></div>
+      </div>
+      <div class="panel" id="today-follow" hidden></div>
 
       <div class="panel">
         <div class="panel-h"><h2>Today</h2><span class="muted small">~3,100 kcal · 2.5 L water</span></div>
@@ -127,6 +146,7 @@
     </section>
 
     <section id="sales" class="view" hidden>
+      <div class="panel" id="pipeline"></div>
       <div class="panel"><div class="panel-h"><h2>This week</h2><span class="muted small">Mon–Sun</span></div><div class="cards" id="week-cards"></div>
         <details class="more"><summary>Past weeks</summary><div id="past-weeks"></div></details></div>
       <div class="panel"><div class="panel-h"><h2>Website clients</h2><span class="muted small">Launch $100/mo · Grow $200/mo</span></div><div class="cards" id="mrr-cards"></div><div id="clients"></div></div>
@@ -139,13 +159,23 @@
       <div class="panel"><div class="panel-h"><h2>Income vs. goal</h2></div><div class="chart" id="goal-chart"></div></div>
       <div class="panel"><div class="panel-h"><h2>Moving to Switzerland</h2><span class="muted small">Only business profit counts: it moves with you</span></div><div class="cards" id="swiss-cards"></div></div>
       <div class="cards" id="trip-cards"></div>
+      <div class="panel" id="ideas"></div>
       <p class="muted small">Goals 1 and 2 count all income, with work pay after tax. Goal 3 counts only passive income, like template sales and hosting retainers.</p>
     </section>
 
+    <section id="mail" class="view" hidden><div id="mail-root"></div></section>
+    <section id="calendar" class="view" hidden><div id="cal-root"></div></section>
+    <section id="docs" class="view" hidden><div id="docs-root"></div></section>
+    <section id="subs" class="view" hidden><div id="subs-root"></div></section>
+    <section id="automations" class="view" hidden><div id="auto-root"></div></section>
+    <section id="settings" class="view" hidden><div id="settings-root"></div></section>
+
     <footer class="foot">
-      <span>W. Lanteigne · Whistler, BC</span>
+      <span>W. Lanteigne · Whistler, BC · <button class="link" type="button" data-act="guide">How HQ works</button></span>
       <button class="link" id="signout" type="button">Lock</button>
     </footer>
+    </div>
+    <button class="fab" type="button" data-act="add" aria-label="Quick add">＋</button>
     <p class="toast" id="toast" role="status" hidden></p>
   </div>
 
@@ -175,10 +205,14 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=11"></script>
-  <script src="plans.js?v=11"></script>
-  <script src="calc.js?v=11"></script>
-  <script src="tabs.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="config.js?v=12"></script>
+  <script src="plans.js?v=12"></script>
+  <script src="calc.js?v=12"></script>
+  <script src="ui.js?v=12"></script>
+  <script src="tabs.js?v=12"></script>
+  <script src="mail.js?v=12"></script>
+  <script src="calendar.js?v=12"></script>
+  <script src="extras.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

@@ -7,5 +7,9 @@ window.HQ_CONFIG = {
   // The one account that can unlock HQ (the password is what protects it)
   ownerEmail: 'wrlanteigne@gmail.com',
   // Meadow Park pays every second Thursday; this is one known payday.
-  paydayAnchor: '2026-12-03'
+  paydayAnchor: '2026-12-03',
+  // Google sign-in for Gmail + Calendar. Leave blank: it's set from the app (Settings or Mail tab).
+  googleClientId: '',
+  // The auto shops from the invoice research (their mail counts as Important)
+  shopDomains: ['localautomotive.com', 'callahanautomotiveinc@gmail.com', 'newportauto.ca', 'tirecraft.ca', 'rpmalignment@mechanicnet.com', 'carsonauto.ca', 'carsonauto@outlook.com', 'diamondheadmotors.com', 'jbautocare.com']
 };
