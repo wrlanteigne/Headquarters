@@ -263,7 +263,7 @@
         (() => {
           const row = el('div', 'srow col'); const t = el('div', 'srow-t'); t.append(el('b', '', 'Keyboard shortcuts'));
           const k = el('div', 'keys');
-          [['⌘K', 'Search anything'], ['⌘J', 'Ask Claude'], ['N', 'Quick add'], ['?', 'Guide'], ['⌘B / ⌘I / ⌘U', 'Bold, italic, underline in Docs'], ['/', 'Insert menu in Docs'], ['⌘K in a doc', 'Add a link'], ['Esc', 'Close a pop-up']].forEach(([a, b]) => { const r = el('div'); r.append(el('kbd', '', a), el('span', '', b)); k.append(r); });
+          [['⌘K', 'Search anything'], ['N', 'Quick add'], ['?', 'Guide'], ['⌘B / ⌘I / ⌘U', 'Bold, italic, underline in Docs'], ['/', 'Insert menu in Docs'], ['⌘K in a doc', 'Add a link'], ['Esc', 'Close a pop-up']].forEach(([a, b]) => { const r = el('div'); r.append(el('kbd', '', a), el('span', '', b)); k.append(r); });
           row.append(t, k); return row;
         })(),
         action('Install HQ', 'iPhone: Safari → Share → Add to Home Screen. Mac: Chrome → Install page as app.', el('span'))
