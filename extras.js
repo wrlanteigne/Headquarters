@@ -324,30 +324,104 @@
   // =========================================================
   // GOALS: ideas
   // =========================================================
-  function ideas() {
-    const box = $('ideas'); if (!box) return;
-    const list = (ctx.D.notes || []).filter((n) => !n.done).sort((a, b) => (b.pinned - a.pinned) || (a.created_at < b.created_at ? 1 : -1));
-    const head = el('div', 'panel-h'); head.append(el('h2', '', 'Ideas'), el('span', 'muted small', list.length + ' saved'));
-    const add = el('form', 'hrow');
-    const inp = el('input', 'mini-search'); inp.placeholder = 'Got an idea? Type it and press Enter'; inp.setAttribute('aria-label', 'New idea');
-    add.append(inp, btn('Save', 'mini primary'));
-    add.addEventListener('submit', async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await addIdea(v); });
-    const ul = el('ul', 'items');
-    if (!list.length) ul.append(el('li', 'muted', 'Business ideas, things to try, stuff to remember. Tap + anywhere to add one fast.'));
-    list.forEach((n) => {
-      const li = el('li', 'item');
-      li.append(el('span', 'idea-t' + (n.pinned ? ' pinned' : ''), n.text));
-      const pin = btn(n.pinned ? '★' : '☆', 'mini', async () => { n.pinned = !n.pinned; await save('notes', {pinned: n.pinned}, {id: n.id}); ideas(); }); pin.setAttribute('aria-label', n.pinned ? 'Unpin' : 'Pin');
-      const done = btn('Done', 'mini', async () => { n.done = true; await save('notes', {done: true}, {id: n.id}); ideas(); window.HQ_UI.undoable('Idea marked done.', async () => { n.done = false; await save('notes', {done: false}, {id: n.id}); ideas(); }); });
-      li.append(pin, done); ul.append(li);
-    });
-    box.replaceChildren(head, add, ul);
+  const IDEA_CATS = ['Business', 'Etsy templates', 'Clearform Studio', 'Inspiration', 'Other'];
+  const IDEA_GROUPS = [
+    ['Working on it', (n) => /testing|exploring|doing/.test(n.status || ''), 'Ideas you’re testing or looking into.'],
+    ['New ideas', (n) => !n.status || n.status === 'new', 'Not looked at yet.'],
+    ['Passed', (n) => n.status === 'passed', 'Said no, and why, so you don’t go round in circles.']
+  ];
+  function ideaStatus(n, status) {
+    const was = n.status || 'new';
+    n.status = status; ideas();
+    save('notes', {status, updated_at: new Date().toISOString()}, {id: n.id});
+    window.HQ_UI.undoable('Moved “' + n.text.slice(0, 40) + '”.', async () => { n.status = was; await save('notes', {status: was}, {id: n.id}); ideas(); });
   }
-  async function addIdea(text) {
-    const {data, error} = await ctx.sb.from('notes').insert({user_id: ctx.user.id, kind: 'idea', text}).select().single();
+  function ideaForm(n) {
+    const isNew = !n; n = n || {};
+    const f = el('div', 'form');
+    f.append(U.field('Idea', 'text', 'text', n.text || ''),
+      (() => { const r = el('div', 'two'); r.append(U.field('Category', 'category', 'select', null, {options: IDEA_CATS.map((c) => [c, c])}), U.field('Status', 'status', 'select', null, {options: [['new', 'New'], ['exploring', 'Looking into it'], ['testing', 'Testing it'], ['passed', 'Passed']]})); return r; })(),
+      U.field('Notes', 'detail', 'textarea', n.detail || '', {rows: 5, placeholder: 'Who it’s for, how it makes money, what you’ve tried, why you passed…'}));
+    f.querySelector('[name=category]').value = n.category || 'Business';
+    f.querySelector('[name=status]').value = n.status || 'new';
+    const ok = btn('Save', 'primary'), acts = [ok];
+    const del = isNew ? null : btn('Delete', 'ghost'); if (del) acts.push(del);
+    const sh = U.sheet(isNew ? 'New idea' : 'Idea', f, {actions: acts});
+    ok.addEventListener('click', async () => {
+      const v = U.values(f); if (!v.text) { ctx.toast('Write the idea first.'); return; }
+      const row = {text: v.text, category: v.category, status: v.status, detail: v.detail || null, updated_at: new Date().toISOString()};
+      ok.disabled = true;
+      if (isNew) { await addIdea(row); }
+      else { const old = {text: n.text, category: n.category, status: n.status, detail: n.detail}; if (!(await save('notes', row, {id: n.id}))) { ok.disabled = false; return; } Object.assign(n, row); window.HQ_UI.undoable('Saved idea.', async () => { await save('notes', old, {id: n.id}); Object.assign(n, old); ideas(); }); }
+      sh.close(); ideas();
+    });
+    if (del) del.addEventListener('click', async () => {
+      if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; return; }
+      const {error} = await ctx.sb.from('notes').delete().eq('id', n.id); if (error) { ctx.toast(error.message); return; }
+      ctx.D.notes = ctx.D.notes.filter((x) => x.id !== n.id); sh.close(); ideas();
+      const copy = Object.assign({}, n);
+      window.HQ_UI.undoable('Deleted idea.', async () => { const {data, error: e2} = await ctx.sb.from('notes').insert(copy).select().single(); if (e2) throw e2; ctx.D.notes.push(data); ideas(); });
+    });
+  }
+  function ideas() {
+    const box = $('ideas-root'); if (!box) return;
+    const all = (ctx.D.notes || []).filter((n) => !n.done && (!n.kind || n.kind === 'idea'));
+    const cat = box.dataset.cat || '', q = (box.dataset.q || '').trim().toLowerCase();
+    const panel = el('div', 'panel');
+    const head = el('div', 'panel-h'); head.append(el('h2', '', 'Ideas'), el('span', 'muted small', all.filter((n) => n.status !== 'passed').length + ' open · ' + all.filter((n) => n.status === 'passed').length + ' passed'));
+    const add = el('form', 'idea-add');
+    const inp = el('input', 'pl-search'); inp.placeholder = 'Got an idea? Type it and press Enter'; inp.setAttribute('aria-label', 'New idea');
+    const csel = el('select', 'mini-sel'); csel.setAttribute('aria-label', 'Category'); IDEA_CATS.forEach((c) => csel.append(new Option(c, c))); csel.value = cat || 'Business';
+    add.append(inp, csel, btn('Save', 'primary'));
+    add.addEventListener('submit', async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; await addIdea({text: v, category: csel.value, status: 'new'}); });
+    const tools = el('div', 'idea-tools');
+    const chips = el('div', 'pl-tabs');
+    [''].concat(IDEA_CATS).forEach((c) => {
+      const n = all.filter((x) => !c || (x.category || 'Other') === c).length; if (c && !n) return;
+      const b = btn('', 'pl-tab' + (cat === c ? ' on' : ''), () => { box.dataset.cat = c; ideas(); }); b.append(el('span', '', c || 'All'), el('b', '', String(n))); chips.append(b);
+    });
+    const s = el('input', 'mini-search'); s.type = 'search'; s.placeholder = 'Search ideas'; s.value = box.dataset.q || ''; s.setAttribute('aria-label', 'Search ideas');
+    s.addEventListener('input', () => { box.dataset.q = s.value; ideas(); const n = box.querySelector('.idea-tools .mini-search'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    tools.append(chips, s);
+    panel.append(head, add, tools);
+    const shown = all.filter((n) => (!cat || (n.category || 'Other') === cat) && (!q || (n.text + ' ' + (n.detail || '') + ' ' + (n.category || '')).toLowerCase().includes(q)));
+    const parts = [panel];
+    IDEA_GROUPS.forEach(([title, test, sub], gi) => {
+      const list = shown.filter(test).sort((a, b) => (b.pinned - a.pinned) || ((a.updated_at || a.created_at) < (b.updated_at || b.created_at) ? 1 : -1));
+      if (!list.length) return;
+      const sec = el(gi === 2 ? 'details' : 'div', 'panel idea-group');
+      const h = el(gi === 2 ? 'summary' : 'div', 'panel-h'); h.append(el('h2', '', title + ' · ' + list.length), el('span', 'muted small', sub));
+      sec.append(h);
+      const ul = el('ul', 'idea-list');
+      list.forEach((n) => {
+        const li = el('li', 'idea' + (n.pinned ? ' pinned' : '')); li.tabIndex = 0;
+        const top = el('div', 'idea-top');
+        const t = el('div', 'idea-main'); const nm = el('div', 'idea-name'); nm.append(el('b', '', n.text)); if (n.category) nm.append(el('span', 'pl-stage', n.category)); if (n.status === 'testing') nm.append(el('span', 'pl-hot', 'Testing'));
+        t.append(nm);
+        if (n.detail) t.append(el('p', 'idea-detail', n.detail));
+        const a = el('div', 'pl-acts');
+        const pin = btn(n.pinned ? '★' : '☆', 'mini', async (e) => { e.stopPropagation(); n.pinned = !n.pinned; ideas(); await save('notes', {pinned: n.pinned}, {id: n.id}); }); pin.setAttribute('aria-label', n.pinned ? 'Unpin' : 'Pin to top');
+        a.append(pin);
+        if (n.status !== 'passed' && !/testing|exploring/.test(n.status || '')) a.append(btn('Look into it', '', (e) => { e.stopPropagation(); ideaStatus(n, 'exploring'); }));
+        if (n.status !== 'passed') a.append(btn('Pass', 'ghost', (e) => { e.stopPropagation(); ideaStatus(n, 'passed'); }));
+        else a.append(btn('Bring back', '', (e) => { e.stopPropagation(); ideaStatus(n, 'new'); }));
+        top.append(t, a); li.append(top);
+        li.addEventListener('click', () => ideaForm(n));
+        li.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === li) ideaForm(n); });
+        ul.append(li);
+      });
+      sec.append(ul); parts.push(sec);
+    });
+    if (!shown.length) parts.push(el('p', 'pl-empty', all.length ? 'No ideas match.' : 'No ideas yet. Type one above, or tap + anywhere in HQ.'));
+    parts.push(el('p', 'muted small', 'Tap an idea to add notes: who it’s for, how it makes money, why you passed. ★ keeps it at the top.'));
+    box.replaceChildren(...parts);
+  }
+  async function addIdea(row) {
+    if (typeof row === 'string') row = {text: row, category: 'Business', status: 'new'};
+    const {data, error} = await ctx.sb.from('notes').insert(Object.assign({user_id: ctx.user.id, kind: 'idea'}, row)).select().single();
     if (error) { ctx.toast('Not saved: ' + error.message); return; }
     ctx.D.notes.push(data); ideas();
-    window.HQ_UI.undoable('Idea saved to Goals.', async () => { await ctx.sb.from('notes').delete().eq('id', data.id); ctx.D.notes = ctx.D.notes.filter((q) => q.id !== data.id); ideas(); });
+    window.HQ_UI.undoable('Idea saved to Ideas.', async () => { await ctx.sb.from('notes').delete().eq('id', data.id); ctx.D.notes = ctx.D.notes.filter((q) => q.id !== data.id); ideas(); });
   }
 
   // =========================================================
@@ -446,7 +520,7 @@
       ['◷', 'Event', () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); window.HQ_CAL && window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 3600000)}); }],
       ['◎', 'Lead', () => leadForm()],
       ['▤', 'Doc', () => window.HQ_DOCS.create()],
-      ['✦', 'Idea', () => simple('New idea', [U.field('Idea', 'text', 'textarea', '', {rows: 3})], (v) => v.text && addIdea(v.text))],
+      ['✦', 'Idea', () => ideaForm()],
       ['⚑', 'Reminder', () => simple('Remind me', [U.field('What', 'title', 'text', ''), U.field('Priority', 'priority', 'select', null, {options: [['med', 'Medium'], ['high', 'High'], ['low', 'Low']]})], async (v) => {
         if (!v.title) return; const row = {id: nid('w'), priority: v.priority, area: 'Me', title: v.title.slice(0, 60), item: v.title, status: 'open'};
         if (await save('attention', row)) { ctx.D.attention.push(Object.assign({user_id: ctx.user.id, created_at: new Date().toISOString()}, row)); ctx.rerender(); window.HQ_UI.undoable('Added to Needs you.', async () => { await ctx.sb.from('attention').delete().eq('id', row.id); ctx.D.attention = ctx.D.attention.filter((q) => q.id !== row.id); ctx.rerender(); }); }
@@ -485,10 +559,11 @@
     sh.box.classList.add('pal-sheet');
     const D = ctx.D;
     const base = [
-      ...[['today', 'Today'], ['learn', 'Learn · Founder School'], ['calendar', 'Calendar'], ['mail', 'Mail'], ['sales', 'People & pipeline'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['goals', 'Goals'], ['automations', 'Automations'], ['subs', 'Subscriptions'], ['settings', 'Settings']].map(([k, l]) => ({k: 'Go to', t: l, run: () => go(k)})),
+      ...[['today', 'Today'], ['learn', 'Learn · Founder School'], ['calendar', 'Calendar'], ['mail', 'Mail'], ['sales', 'People & pipeline'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['goals', 'Goals'], ['ideas', 'Ideas'], ['automations', 'Automations'], ['subs', 'Subscriptions'], ['settings', 'Settings']].map(([k, l]) => ({k: 'Go to', t: l, run: () => go(k)})),
       {k: 'Do', t: 'Write an email', run: () => window.HQ_MAIL && window.HQ_MAIL.compose()},
       {k: 'Do', t: 'New calendar event', run: () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 3600000)}); }},
       {k: 'Do', t: 'New lead', run: () => leadForm()},
+      {k: 'Do', t: 'New idea', run: () => ideaForm()},
       {k: 'Do', t: 'New doc', run: () => window.HQ_DOCS.create()},
       {k: 'Do', t: 'Start a focus block', run: () => { go('today'); setTimeout(() => $('focus-next').click(), 50); }},
       {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
@@ -498,13 +573,13 @@
       ...(window.HQ_SCHOOL ? window.HQ_SCHOOL.links().map((l) => ({k: 'Open', t: l.name + (l.sub ? ' · ' + l.sub : ''), run: () => window.HQ_SCHOOL.go(l)})) : [])
     ];
     const items = () => base.concat(
+      (D.notes || []).filter((n) => !n.done).map((n) => ({k: 'Idea', t: n.text, run: () => { go('ideas'); ideaForm(n); }})),
       (D.leads || []).map((l) => ({k: 'Lead · ' + l.stage, t: l.business + (l.contact ? ' · ' + l.contact : ''), run: () => leadForm(l)})),
       (D.docs || []).filter((d) => !d.archived).map((d) => ({k: 'Doc · ' + d.workspace, t: d.title, extra: String(d.body).replace(/<[^>]+>/g, ' '), run: () => window.HQ_DOCS.open(d)})),
       (D.attention || []).filter((a) => a.status === 'open').map((a) => ({k: 'Needs you', t: a.title || a.item, extra: a.item, run: () => go('today')})),
       (D.tasks || []).filter((r) => !r.done).map((r) => ({k: 'School · ' + dayName(r.date), t: r.task, run: () => go('school')})),
       (D.clients || []).map((c) => ({k: 'Client', t: c.business, run: () => go('sales')})),
-      (window.HQ_LEARN ? window.HQ_LEARN.lessons : []).map((l) => ({k: 'Lesson', t: l.title, extra: l.level.title + ' ' + l.body.join(' '), run: () => { go('learn'); window.HQ_LEARN.open(l.id); }})),
-      (D.notes || []).filter((n) => !n.done).map((n) => ({k: 'Idea', t: n.text, run: () => go('goals')}))
+      (window.HQ_LEARN ? window.HQ_LEARN.lessons : []).map((l) => ({k: 'Lesson', t: l.title, extra: l.level.title + ' ' + l.body.join(' '), run: () => { go('learn'); window.HQ_LEARN.open(l.id); }}))
     );
     let sel = 0, shown = [];
     const drawList = () => {
@@ -532,6 +607,7 @@
       ['Calendar', 'Your Google Calendar with Meadow Park shifts, school and follow-ups on top. Click an empty time to add an event.'],
       ['Mail', 'Your Gmail, sorted: Important first (clients, leads, school, work, money), everything else below. Read, reply, write, archive. Claude’s morning drafts wait at the top for you to check and send.'],
       ['People', 'Every company you could sell a website to. Search at the top, call from the To call tab, then tap what happened (Called, Interested, Preview sent, Signed) and it moves along. Moving forward counts in today’s outreach.'],
+      ['Ideas', 'Every business idea in one place. Type one at the top, tap it to add notes, ★ to keep it on top. Look into it moves it to Working on it; Pass keeps it with the reason so you don’t go round in circles.'],
       ['Docs', 'Write notes, briefs and scripts, sorted by business. Pick a template, then type / to add headings, lists or to-dos. Saves as you type, and exports to Word, PDF or email.'],
       ['School', 'A card per course with progress and the next test, today’s tasks to tick off, and the week ahead.'],
       ['Money · Goals', 'Income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],

@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=23">
+  <link rel="stylesheet" href="styles.css?v=24">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -60,7 +60,7 @@
         <span class="nav-g">Comms</span>
         <button class="tab" role="tab" data-tab="mail" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Mail</span></button><button class="tab" role="tab" data-tab="calendar" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Calendar</span></button>
         <span class="nav-g">Work</span>
-        <button class="tab" role="tab" data-tab="sales" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/></svg><span>People</span></button><button class="tab" role="tab" data-tab="docs" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg><span>Docs</span></button><button class="tab" role="tab" data-tab="school" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg><span>School</span></button>
+        <button class="tab" role="tab" data-tab="sales" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/></svg><span>People</span></button><button class="tab" role="tab" data-tab="ideas" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Ideas</span></button><button class="tab" role="tab" data-tab="docs" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg><span>Docs</span></button><button class="tab" role="tab" data-tab="school" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg><span>School</span></button>
         <span class="nav-g">Money</span>
         <button class="tab" role="tab" data-tab="money" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><span>Money</span></button><button class="tab" role="tab" data-tab="subs" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Subscriptions</span></button>
         <span class="nav-g">System</span>
@@ -156,13 +156,14 @@
       <div class="panel"><div class="panel-h"><h2>What Claude did lately</h2></div><ul class="log" id="log-list"></ul></div>
     </section>
 
+    <section id="ideas" class="view" hidden><div id="ideas-root"></div></section>
+
     <section id="goals" class="view" hidden>
       <div class="mission" id="mission"></div>
       <div class="cards" id="goal-cards"></div>
       <div class="panel"><div class="panel-h"><h2>Income vs. goal</h2></div><div class="chart" id="goal-chart"></div></div>
       <div class="panel"><div class="panel-h"><h2>Moving to Switzerland</h2><span class="muted small">Only business profit counts: it moves with you</span></div><div class="cards" id="swiss-cards"></div></div>
       <div class="cards" id="trip-cards"></div>
-      <div class="panel" id="ideas"></div>
       <p class="muted small">Goals 1 and 2 count all income, with work pay after tax. Goal 3 counts only passive income, like template sales and hosting retainers.</p>
     </section>
 
@@ -209,20 +210,20 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=23"></script>
-  <script src="plans.js?v=23"></script>
-  <script src="calc.js?v=23"></script>
-  <script src="ui.js?v=23"></script>
-  <script src="prefs.js?v=23"></script>
-  <script src="tabs.js?v=23"></script>
-  <script src="mail.js?v=23"></script>
-  <script src="calendar.js?v=23"></script>
-  <script src="learn-data.js?v=23"></script>
-  <script src="learn.js?v=23"></script>
-  <script src="docs.js?v=23"></script>
-  <script src="school.js?v=23"></script>
-  <script src="extras.js?v=23"></script>
-  <script src="more.js?v=23"></script>
-  <script src="app.js?v=23"></script>
+  <script src="config.js?v=24"></script>
+  <script src="plans.js?v=24"></script>
+  <script src="calc.js?v=24"></script>
+  <script src="ui.js?v=24"></script>
+  <script src="prefs.js?v=24"></script>
+  <script src="tabs.js?v=24"></script>
+  <script src="mail.js?v=24"></script>
+  <script src="calendar.js?v=24"></script>
+  <script src="learn-data.js?v=24"></script>
+  <script src="learn.js?v=24"></script>
+  <script src="docs.js?v=24"></script>
+  <script src="school.js?v=24"></script>
+  <script src="extras.js?v=24"></script>
+  <script src="more.js?v=24"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>

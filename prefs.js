@@ -18,7 +18,7 @@
     autoLock: 0
   };
   const ACCENTS = [['#2563EB', 'Blue'], ['#7C3AED', 'Violet'], ['#059669', 'Green'], ['#EA580C', 'Orange'], ['#DB2777', 'Pink'], ['#0891B2', 'Teal'], ['#18181B', 'Graphite']];
-  const TABS = [['today', 'Today'], ['goals', 'Goals'], ['learn', 'Learn'], ['mail', 'Mail'], ['calendar', 'Calendar'], ['sales', 'People'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['subs', 'Subscriptions'], ['automations', 'Automations']];
+  const TABS = [['today', 'Today'], ['goals', 'Goals'], ['learn', 'Learn'], ['mail', 'Mail'], ['calendar', 'Calendar'], ['sales', 'People'], ['ideas', 'Ideas'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['subs', 'Subscriptions'], ['automations', 'Automations']];
 
   let P = Object.assign({}, DEFAULTS, cached());
   function cached() { try { return JSON.parse(localStorage.getItem('hq_prefs')) || {}; } catch (e) { return {}; } }
