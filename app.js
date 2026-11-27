@@ -234,6 +234,7 @@
     document.querySelectorAll('.view').forEach((v) => { v.hidden = v.id !== b.dataset.tab; });
     store.set('hq_tab', b.dataset.tab);
     document.body.dataset.view = b.dataset.tab;
+    if (b.dataset.tab !== 'docs') document.body.classList.remove('doc-open'); else if (window.HQ_DOCS && window.HQ_DOCS.isOpen()) document.body.classList.add('doc-open');
     if (user) render();
     window.scrollTo(0, 0);
   }));
