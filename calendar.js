@@ -68,12 +68,12 @@
         const [a, b] = [s.start_time, s.end_time].map((x) => x.split(':').map(Number));
         const st = new Date(d); st.setHours(a[0], a[1] || 0);
         const en = new Date(d); en.setHours(b[0], b[1] || 0); if (en <= st) en.setDate(en.getDate() + 1);
-        out.push({hq: 'shifts', title: 'Meadow Park shift', start: st, end: en, notes: s.note || ''});
-      } else out.push({hq: 'shifts', title: 'Meadow Park shift', allDay: true, start: d, end: addDays(d, 1)});
+        out.push({hq: 'shifts', title: 'Meadow Park shift', start: st, end: en, notes: s.note || '', row: s});
+      } else out.push({hq: 'shifts', title: 'Meadow Park shift', allDay: true, start: d, end: addDays(d, 1), row: s});
     });
-    if (layerOn('school')) (D.tasks || []).filter((r) => !r.done).forEach((r) => { const d = parse(r.date); if (inRange(d)) out.push({hq: 'school', title: (r.kind ? r.kind + ': ' : '') + r.task, allDay: true, start: d, end: addDays(d, 1), notes: [r.unit, r.note].filter(Boolean).join(' · ')}); });
-    if (layerOn('follow')) (D.leads || []).filter((l) => l.next_date && !/signed|lost/.test(l.stage)).forEach((l) => { const d = parse(l.next_date); if (inRange(d)) out.push({hq: 'follow', title: 'Follow up: ' + l.business, allDay: true, start: d, end: addDays(d, 1), notes: l.next_step || '', lead: l}); });
-    if (layerOn('dates')) (D.countdowns || []).forEach((c) => { const d = new Date(c.at); if (inRange(d)) out.push({hq: 'dates', title: c.title, allDay: true, start: new Date(d.getFullYear(), d.getMonth(), d.getDate()), end: addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), 1)}); });
+    if (layerOn('school')) (D.tasks || []).filter((r) => !r.done).forEach((r) => { const d = parse(r.date); if (inRange(d)) out.push({hq: 'school', title: (r.kind ? r.kind + ': ' : '') + r.task, allDay: true, start: d, end: addDays(d, 1), notes: [r.unit, r.note].filter(Boolean).join(' · '), row: r}); });
+    if (layerOn('follow')) (D.leads || []).filter((l) => l.next_date && !/signed|lost/.test(l.stage)).forEach((l) => { const d = parse(l.next_date); if (inRange(d)) out.push({hq: 'follow', title: 'Follow up: ' + l.business, allDay: true, start: d, end: addDays(d, 1), notes: l.next_step || '', lead: l, row: l}); });
+    if (layerOn('dates')) (D.countdowns || []).forEach((c) => { const d = new Date(c.at); if (inRange(d)) out.push({hq: 'dates', title: c.title, allDay: true, start: new Date(d.getFullYear(), d.getMonth(), d.getDate()), end: addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), 1), row: c}); });
     return out;
   }
   const colorOf = (e) => (e.hq ? LAYERS.find((l) => l[0] === e.hq)[2] : e.cal.color);
@@ -158,7 +158,7 @@
     const b = el('div');
     b.append(el('p', '', e.allDay ? e.start.toLocaleDateString('en-CA', {weekday: 'long', month: 'long', day: 'numeric'}) : e.start.toLocaleDateString('en-CA', {weekday: 'long', month: 'short', day: 'numeric'}) + ', ' + hm(e.start) + '–' + hm(e.end)));
     if (e.notes) b.append(el('p', 'muted', e.notes));
-    b.append(el('p', 'muted small', 'This comes from HQ (' + LAYERS.find((l) => l[0] === e.hq)[1] + '), not Google Calendar. ' + (e.hq === 'shifts' ? 'Tell Claude about shift changes.' : e.hq === 'school' ? 'Tick it off on the School tab.' : e.hq === 'follow' ? 'Change it on the lead in Sales.' : '')));
+    b.append(el('p', 'muted small', 'This comes from HQ (' + LAYERS.find((l) => l[0] === e.hq)[1] + '), not Google Calendar. ' + 'Drag it to move it to another day or time.' + (e.hq === 'school' ? ' Tick it off on the School tab.' : e.hq === 'follow' ? ' Change the details on the lead in Sales.' : '')));
     const acts = [];
     if (e.lead && window.HQ_EXTRAS) acts.push(btn('Open lead', 'primary', () => { sh.close(); window.HQ_EXTRAS.leadForm(e.lead); }));
     if (e.hq === 'shifts' && g() && g().connected()) acts.push(btn('Copy to Google Calendar', '', () => { sh.close(); form(null, {start: e.start, end: e.end, allDay: e.allDay}); setTimeout(() => { const t = document.querySelector('.evform [name=title]'); if (t) t.value = e.title; }, 60); }));
@@ -205,8 +205,8 @@
     // All-day row
     const adr = el('div', 'cal-row cal-allday'); adr.append(el('div', 'cal-gut', 'all day'));
     for (let i = 0; i < n; i++) {
-      const d = addDays(S.start, i), c = el('div', 'cal-adc');
-      all.filter((e) => e.allDay && e.start <= d && e.end > d).forEach((e) => { const b = el('button', 'ev ad', e.title); b.type = 'button'; b.style.setProperty('--c', colorOf(e)); b.addEventListener('click', () => (e.hq ? hqInfo(e) : form(e))); c.append(b); });
+      const d = addDays(S.start, i), c = el('div', 'cal-adc'); c.dataset.i = i;
+      all.filter((e) => e.allDay && e.start <= d && e.end > d).forEach((e) => { const b = el('button', 'ev ad', e.title); b.type = 'button'; b.style.setProperty('--c', colorOf(e)); b.addEventListener('click', () => { if (b._dragged) { b._dragged = false; return; } if (e.hq) hqInfo(e); else form(e); }); if (canDrag(e)) dragify(b, e, i, true); c.append(b); });
       c.addEventListener('dblclick', (ev) => { if (ev.target === c) form(null, {start: d, end: addDays(d, 1), allDay: true}); });
       adr.append(c);
     }
@@ -236,7 +236,7 @@
         b.style.setProperty('--c', colorOf(e));
         b.append(el('b', '', e.title), el('span', '', hm(e.orig.start) + (h >= 34 ? ' – ' + hm(e.orig.end) : '')));
         b.addEventListener('click', () => { if (b._dragged) { b._dragged = false; return; } if (e.hq) hqInfo(e.orig); else form(e.orig); });
-        if (!e.hq && e.orig.cal && e.orig.cal.write) eventDrag(b, e.orig, i);
+        if (canDrag(e.orig)) dragify(b, e.orig, i, false);
         col.append(b);
       });
       if (ymd(d) === today) { const now = new Date(); const ln = el('div', 'now-line'); ln.style.top = ((now.getHours() + now.getMinutes() / 60) - H0) * ROW + 'px'; col.append(ln); }
@@ -244,7 +244,7 @@
     }
     body.append(inner); grid.append(body);
     out.push(grid);
-    out.push(el('p', 'muted small', (window.matchMedia('(pointer: coarse)').matches ? 'Tap an empty slot to add an event. Hold an event, then drag to move it, or drag its bottom edge to change the end. ' : 'Click or drag across an empty slot to add an event. Drag an event to move it, or drag its bottom edge to change the end. ') + 'Tap an event to edit it. Shifts, school, follow-ups and countdowns come from HQ.' + (S.busy ? ' Loading…' : '')));
+    out.push(el('p', 'muted small', (window.matchMedia('(pointer: coarse)').matches ? 'Tap an empty slot to add an event. Press and hold an event for a moment, then drag to move it (or drag its bottom edge to change the end). ' : 'Click or drag across an empty slot to add an event. Drag an event to move it, or drag its bottom edge to change the end. ') + 'Shifts, school tasks, follow-ups and countdowns can be dragged too. Tap an event to edit it.' + (S.busy ? ' Loading…' : '')));
     const keepScroll = root.querySelector('.cal-body'); const st = keepScroll ? keepScroll.scrollTop : null;
     root.replaceChildren(...out);
     body.scrollTop = st != null ? st : (window.HQ_PREFS ? +window.HQ_PREFS.get('calScrollHour') : 7) * ROW;
@@ -252,69 +252,133 @@
 
   // ---------- Dragging ----------
   // Drag an event to move it (any day, 15-minute steps); drag its bottom edge to change the end.
-  // Drag across an empty slot to make an event that long. On a phone, hold an event for a moment first.
+  // All-day items move between days in the all-day row. HQ's own items (shifts, school tasks,
+  // follow-ups, countdowns) save to Supabase; Google events save to Google Calendar.
+  // Mouse uses pointer events. Touch uses touch events with a short hold, because a phone
+  // browser cancels pointer drags as soon as it decides the finger is scrolling.
   const SNAP = 15;
   const snap = (mins) => Math.round(mins / SNAP) * SNAP;
-  const colAt = (x, y) => document.elementsFromPoint(x, y).find((n) => n.classList && n.classList.contains('cal-col'));
-  function holdScroll(on) { const b = document.querySelector('.cal-body'); if (b) b.style.touchAction = on ? 'none' : ''; }
+  const cellAt = (x, y, cls) => document.elementsFromPoint(x, y).find((n) => n.classList && n.classList.contains(cls));
+  const HQ_TABLE = {shifts: 'shifts', school: 'school_tasks', follow: 'leads', dates: 'countdowns'};
   document.addEventListener('touchmove', (e) => { if (S.drag && S.drag.started) e.preventDefault(); }, {passive: false});
 
-  function eventDrag(b, ev, i0) {
-    const rs = el('span', 'ev-rs'); rs.setAttribute('aria-hidden', 'true'); b.append(rs);
-    b.addEventListener('pointerdown', (pe) => {
-      if (pe.button !== 0) return;
-      const st = {mode: pe.target === rs ? 'resize' : 'move', x: pe.clientX, y: pe.clientY, started: false, days: 0, mins: 0, touch: pe.pointerType !== 'mouse'};
-      const label = b.querySelector('span:not(.ev-rs)');
-      const begin = () => { st.started = true; S.drag = st; b.classList.add('dragging'); holdScroll(true); try { b.setPointerCapture(pe.pointerId); } catch (x) { /* ignore */ } if (navigator.vibrate) try { navigator.vibrate(10); } catch (x) { /* ignore */ } };
-      if (st.touch) st.timer = setTimeout(begin, 300);
-      const times = () => {
-        const s0 = new Date(ev.start.getTime() + st.days * 864e5 + (st.mode === 'move' ? st.mins * 60000 : 0));
-        let e0 = new Date(ev.end.getTime() + st.days * 864e5 + st.mins * 60000);
+  function canDrag(e) {
+    if (e.hq) return !!(e.row && e.row.id != null && HQ_TABLE[e.hq]);
+    return !!(e.cal && e.cal.write && !(e.raw && e.raw.recurringEventId && e.allDay));
+  }
+
+  function dragify(b, ev, i0, allDay) {
+    const resizable = !allDay && !ev.hq; // shift length drives pay, so shifts only move
+    let rs = null;
+    if (resizable) { rs = el('span', 'ev-rs'); rs.setAttribute('aria-hidden', 'true'); b.append(rs); }
+    b.classList.add('can-drag');
+    const label = b.querySelector('span:not(.ev-rs)');
+    let st = null;
+    const times = (s) => {
+      let s0 = addDays(ev.start, s.days), e0 = addDays(ev.end, s.days);
+      if (!allDay) {
+        if (s.mode === 'move') s0 = new Date(s0.getTime() + s.mins * 60000);
+        e0 = new Date(e0.getTime() + s.mins * 60000);
         if (e0 - s0 < SNAP * 60000) e0 = new Date(s0.getTime() + SNAP * 60000);
-        return [s0, e0];
-      };
-      const move = (m) => {
-        const dx = m.clientX - st.x, dy = m.clientY - st.y;
-        if (!st.started) {
-          if (st.touch) { if (Math.abs(dx) + Math.abs(dy) > 10) end(); return; }
-          if (Math.abs(dx) + Math.abs(dy) < 5) return;
-          begin();
-        }
-        m.preventDefault();
-        st.mins = snap(dy / ROW * 60);
-        if (st.mode === 'move') { const c = colAt(m.clientX, m.clientY); if (c) { st.days = +c.dataset.i - i0; if (b.parentNode !== c) c.append(b); } }
-        const [s0, e0] = times();
+      }
+      return [s0, e0];
+    };
+    const begin = () => { if (!st) return; st.started = true; S.drag = st; b.classList.add('dragging'); if (navigator.vibrate) try { navigator.vibrate(10); } catch (x) { /* ignore */ } };
+    const start = (x, y, mode, touch) => { st = {mode, x, y, started: false, days: 0, mins: 0, touch}; if (touch) st.timer = setTimeout(begin, 280); };
+    // Returns true when the move belongs to the drag (so the page should not scroll)
+    const moveTo = (x, y) => {
+      if (!st) return false;
+      const dx = x - st.x, dy = y - st.y;
+      if (!st.started) {
+        if (st.touch) { if (Math.abs(dx) + Math.abs(dy) > 10) finish(); return false; } // moved early: it's a scroll
+        if (Math.abs(dx) + Math.abs(dy) < 5) return false;
+        begin();
+      }
+      if (!allDay) st.mins = snap(dy / ROW * 60);
+      if (st.mode === 'move') { const c = cellAt(x, y, allDay ? 'cal-adc' : 'cal-col'); if (c) { st.days = +c.dataset.i - i0; if (b.parentNode !== c) c.append(b); } }
+      if (!allDay) {
+        const [s0, e0] = times(st);
         const day0 = new Date(s0.getFullYear(), s0.getMonth(), s0.getDate());
         b.style.left = '0'; b.style.width = '100%';
         b.style.top = ((s0 - day0) / 3600000 - H0) * ROW + 'px';
         b.style.height = Math.max(20, (e0 - s0) / 3600000 * ROW - 2) + 'px';
         if (label) label.textContent = hm(s0) + ' – ' + hm(e0);
-      };
-      const up = async () => {
-        const was = st.started; end();
-        if (!was) return;
-        b._dragged = true; setTimeout(() => { b._dragged = false; }, 400);
-        if (!st.mins && !st.days) { draw(); return; }
-        const [s0, e0] = times();
-        const old = [ev.start, ev.end];
-        ev.start = s0; ev.end = e0; draw();
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        try {
-          await g().fetch(CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none'), {method: 'PATCH', body: JSON.stringify({start: {dateTime: s0.toISOString(), timeZone: tz}, end: {dateTime: e0.toISOString(), timeZone: tz}})});
-          const n = ev.start.toLocaleDateString('en-CA', {weekday: 'short'}) + ' ' + hm(ev.start) + '–' + hm(ev.end);
-          window.HQ_UI.undoable(ev.title + ' → ' + n + (ev.attendees.length ? ' (guests told)' : '') + '.', async () => {
-            await g().fetch(CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none'), {method: 'PATCH', body: JSON.stringify({start: {dateTime: old[0].toISOString(), timeZone: tz}, end: {dateTime: old[1].toISOString(), timeZone: tz}})});
-            ev.start = old[0]; ev.end = old[1]; draw();
-          });
-        } catch (err) { ev.start = old[0]; ev.end = old[1]; draw(); ctx.toast(err.message === 'signin' ? 'Reconnect Google, then try again.' : 'Couldn’t move it: ' + err.message); }
-      };
-      function end() { clearTimeout(st.timer); S.drag = null; holdScroll(false); b.classList.remove('dragging'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); }
-      const cancel = () => { const was = st.started; end(); if (was) draw(); };
-      window.addEventListener('pointermove', move, {passive: false});
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', cancel);
+      }
+      return true;
+    };
+    function finish() {
+      if (st) clearTimeout(st.timer);
+      st = null; S.drag = null; b.classList.remove('dragging');
+      window.removeEventListener('pointermove', pMove); window.removeEventListener('pointerup', pUp); window.removeEventListener('pointercancel', pCancel);
+    }
+    const cancel = () => { const was = st && st.started; finish(); if (was) draw(); };
+    const release = async () => {
+      const s = st; const was = s && s.started; finish();
+      if (!was) return false;
+      b._dragged = true; setTimeout(() => { b._dragged = false; }, 400);
+      if (!s.mins && !s.days) { draw(); return true; }
+      const [s0, e0] = times(s);
+      const old = [ev.start, ev.end];
+      ev.start = s0; ev.end = e0; draw();
+      try { await (ev.hq ? dropHQ(ev, s0, old) : dropGoogle(ev, s0, e0, old)); }
+      catch (err) { ev.start = old[0]; ev.end = old[1]; draw(); ctx.toast(err.message === 'signin' ? 'Reconnect Google, then try again.' : 'Couldn’t move it: ' + (err.message || err)); }
+      return true;
+    };
+    // Mouse and pen
+    const pMove = (m) => { if (moveTo(m.clientX, m.clientY)) m.preventDefault(); };
+    const pUp = () => { release(); };
+    const pCancel = () => cancel();
+    b.addEventListener('pointerdown', (pe) => {
+      if (pe.pointerType === 'touch' || pe.button !== 0) return;
+      start(pe.clientX, pe.clientY, rs && pe.target === rs ? 'resize' : 'move', false);
+      window.addEventListener('pointermove', pMove, {passive: false}); window.addEventListener('pointerup', pUp); window.addEventListener('pointercancel', pCancel);
     });
-    b.addEventListener('contextmenu', (e) => { if (S.drag) e.preventDefault(); });
+    // Touch: hold, then drag
+    b.addEventListener('touchstart', (te) => {
+      if (te.touches.length !== 1) { cancel(); return; }
+      const t = te.touches[0];
+      start(t.clientX, t.clientY, rs && te.target === rs ? 'resize' : 'move', true);
+    }, {passive: true});
+    b.addEventListener('touchmove', (te) => { const t = te.touches[0]; if (t && moveTo(t.clientX, t.clientY)) te.preventDefault(); }, {passive: false});
+    b.addEventListener('touchend', (te) => { if (st && st.started) te.preventDefault(); release(); });
+    b.addEventListener('touchcancel', cancel);
+    b.addEventListener('contextmenu', (e) => { if (st) e.preventDefault(); });
+  }
+
+  const when = (d, allDay) => d.toLocaleDateString('en-CA', {weekday: 'short', month: 'short', day: 'numeric'}) + (allDay ? '' : ' ' + hm(d));
+
+  async function dropGoogle(ev, s0, e0, old) {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const url = CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none');
+    const body = (a, z) => (ev.allDay ? {start: {date: ymd(a)}, end: {date: ymd(z)}} : {start: {dateTime: a.toISOString(), timeZone: tz}, end: {dateTime: z.toISOString(), timeZone: tz}});
+    await g().fetch(url, {method: 'PATCH', body: JSON.stringify(body(s0, e0))});
+    const n = ev.allDay ? when(s0, true) : s0.toLocaleDateString('en-CA', {weekday: 'short'}) + ' ' + hm(s0) + '–' + hm(e0);
+    window.HQ_UI.undoable(ev.title + ' → ' + n + (ev.attendees.length ? ' (guests told)' : '') + '.', async () => {
+      await g().fetch(url, {method: 'PATCH', body: JSON.stringify(body(old[0], old[1]))});
+      ev.start = old[0]; ev.end = old[1]; draw();
+    });
+  }
+
+  // HQ's own items: work out the new field values, save to Supabase, offer undo
+  async function dropHQ(ev, s0, old) {
+    const row = ev.row, table = HQ_TABLE[ev.hq];
+    const tm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes());
+    let patch;
+    if (ev.hq === 'shifts') {
+      patch = {date: ymd(s0)};
+      if (!ev.allDay) { const len = old[1] - old[0]; patch.start_time = tm(s0); patch.end_time = tm(new Date(s0.getTime() + len)); }
+    } else if (ev.hq === 'school') patch = {date: ymd(s0)};
+    else if (ev.hq === 'follow') patch = {next_date: ymd(s0)};
+    else if (ev.hq === 'dates') { const a = new Date(row.at); const moved = Math.round((s0 - old[0]) / 864e5); patch = {at: addDays(a, moved).toISOString()}; }
+    const prev = {}; Object.keys(patch).forEach((k) => { prev[k] = row[k] === undefined ? null : row[k]; });
+    const {error} = await ctx.sb.from(table).update(patch).eq('id', row.id);
+    if (error) throw error;
+    Object.assign(row, patch); draw();
+    window.HQ_UI.undoable(ev.title + ' → ' + when(s0, ev.allDay) + '.', async () => {
+      const {error: e2} = await ctx.sb.from(table).update(prev).eq('id', row.id);
+      if (e2) throw e2;
+      Object.assign(row, prev); draw();
+    });
   }
 
   function slotDrag(col, d) {

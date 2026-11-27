@@ -551,7 +551,9 @@ details.msg summary::-webkit-details-marker { display: none; }
 .ev:not(.ad):hover .ev-rs::after { content: ""; position: absolute; left: 40%; right: 40%; bottom: 2px; height: 2px; border-radius: 2px; background: var(--c); opacity: .8; }
 .ev.dragging { z-index: 5; opacity: .92; box-shadow: 0 8px 24px rgba(0, 0, 0, .5), 0 0 0 1px var(--c); cursor: grabbing; transition: none; }
 .ev.ghost { left: 2px; right: 2px; background: rgba(var(--acc-rgb), .18); border-left-color: var(--cyan); pointer-events: none; color: var(--cyan); font-size: 11px; }
-@media (pointer: fine) { .ev:not(.ad) { cursor: grab; } }
+@media (pointer: fine) { .ev.can-drag { cursor: grab; } }
+@media (pointer: coarse) { .ev-rs { height: 14px; } }
+.ev.ad.dragging { position: relative; }
 .ev:not(.short):not(.ad) { display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; }
 
 
