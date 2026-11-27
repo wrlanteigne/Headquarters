@@ -121,13 +121,17 @@
     return {kind, plan: PLANS[kind], rows, t};
   }
 
-  async function setTick(date, key, on) {
+  async function setTick(date, key, on, silent) {
     const row = {user_id: user.id, date, key, done: on, at: new Date().toISOString()};
     const i = data.ticks.findIndex((r) => r.key === key && r.date === date);
     if (i >= 0) data.ticks[i] = row; else data.ticks.push(row);
     render();
     const {error} = await sb.from('day_ticks').upsert(row, {onConflict: 'user_id,date,key'});
-    if (error) { toast('That tick wasn’t saved. Try again.'); load(); }
+    if (error) { toast('That tick wasn’t saved. Try again.'); load(); return; }
+    if (!silent) {
+      const it = (PLANS[dayKind(date).kind].items || []).find((i) => i.key === key);
+      window.HQ_UI.undoable((on ? 'Ticked off ' : 'Unticked ') + (it ? it.what : 'item') + '.', () => setTick(date, key, !on, true));
+    }
   }
 
   function renderPlan() {

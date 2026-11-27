@@ -969,3 +969,14 @@ textarea.sin { resize: vertical; font-family: var(--sans); }
   .snav { top: 60px; }
 }
 .logo { background: #fff !important; color: #111 !important; }
+
+/* Undo bar */
+.undo-bar { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 22px); transform: translate(-50%, 140%); z-index: 95; display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 32px); background: #18181B; color: #fff; border-radius: 12px; padding: 10px 10px 10px 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); font-size: 14.5px; transition: transform .22s cubic-bezier(.22, 1, .36, 1); }
+.undo-bar.show { transform: translate(-50%, 0); }
+.ub-msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ub-undo { background: none; border: 0; color: #93C5FD; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.ub-undo:hover { background: rgba(255, 255, 255, .1); }
+.ub-x { background: none; border: 0; color: #A1A1AA; font-size: 14px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.ub-x:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+body.dark .undo-bar { background: #F4F4F5; color: #0B0B0D; } body.dark .ub-undo { color: #1D4ED8; } body.dark .ub-x { color: #52525B; }
+@media (max-width: 899px) { .undo-bar { bottom: calc(env(safe-area-inset-bottom) + 86px); } }

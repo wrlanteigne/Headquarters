@@ -83,6 +83,7 @@
     if (error) { ctx.toast('Couldn’t create: ' + error.message); return null; }
     ctx.D.docs.unshift(data);
     open(data, true);
+    window.HQ_UI.undoable('Created “' + data.title + '”.', async () => { await ctx.sb.from('docs').delete().eq('id', data.id); ctx.D.docs = ctx.D.docs.filter((x) => x.id !== data.id); if (S.open && S.open.id === data.id) S.open = null; draw(); });
     return data;
   }
   async function patch(d, row, quiet) {
@@ -95,14 +96,17 @@
     const row = {title: d.title + ' (copy)', body: d.body, icon: d.icon, workspace: d.workspace};
     const {data, error} = await ctx.sb.from('docs').insert(Object.assign({user_id: ctx.user.id}, row)).select().single();
     if (error) { ctx.toast(error.message); return; }
-    ctx.D.docs.unshift(data); ctx.toast('Copied.'); draw();
+    ctx.D.docs.unshift(data); draw();
+    window.HQ_UI.undoable('Made a copy.', async () => { await ctx.sb.from('docs').delete().eq('id', data.id); ctx.D.docs = ctx.D.docs.filter((x) => x.id !== data.id); draw(); });
   }
   async function remove(d) {
+    const copy = Object.assign({}, d);
     const {error} = await ctx.sb.from('docs').delete().eq('id', d.id);
     if (error) { ctx.toast(error.message); return; }
     ctx.D.docs = ctx.D.docs.filter((x) => x.id !== d.id);
     if (S.open && S.open.id === d.id) S.open = null;
-    ctx.toast('Deleted.'); draw();
+    draw();
+    window.HQ_UI.undoable('Deleted “' + (d.title || 'Untitled') + '”.', async () => { const {data, error: e2} = await ctx.sb.from('docs').insert(copy).select().single(); if (e2) throw e2; ctx.D.docs.unshift(data); draw(); });
   }
 
   // ---------- Menus ----------
@@ -124,7 +128,7 @@
   }
   function docMenu(anchor, d) {
     return menu(anchor, [
-      {label: d.pinned ? 'Unpin' : 'Pin to top', run: async () => { await patch(d, {pinned: !d.pinned}); draw(); }},
+      {label: d.pinned ? 'Unpin' : 'Pin to top', run: async () => { const was = !!d.pinned; await patch(d, {pinned: !was}); draw(); window.HQ_UI.undoable(was ? 'Unpinned.' : 'Pinned to top.', async () => { await patch(d, {pinned: was}); draw(); }); }},
       {label: 'Duplicate', run: () => duplicate(d)},
       {label: 'Move to…', run: () => moveTo(anchor, d)},
       '-',
@@ -133,11 +137,11 @@
       {label: 'Print / save as PDF', run: () => exportDoc(d, 'pdf')},
       window.HQ_MAIL ? {label: 'Email it', run: () => exportDoc(d, 'email')} : null,
       '-',
-      {label: d.archived ? 'Unarchive' : 'Archive', run: async () => { await patch(d, {archived: !d.archived}); if (S.open && S.open.id === d.id && d.archived) S.open = null; ctx.toast(d.archived ? 'Archived.' : 'Back in your docs.'); draw(); }},
+      {label: d.archived ? 'Unarchive' : 'Archive', run: async () => { const was = !!d.archived; await patch(d, {archived: !was}); if (S.open && S.open.id === d.id && d.archived) S.open = null; draw(); window.HQ_UI.undoable(was ? 'Back in your docs.' : 'Archived “' + d.title + '”.', async () => { await patch(d, {archived: was}); draw(); }); }},
       {label: 'Delete', danger: true, confirm: 'Tap again to delete', run: () => remove(d)}
     ]);
   }
-  function moveTo(anchor, d) { menu(anchor, SPACES.map((s) => ({label: (d.workspace === s ? '✓ ' : '') + s, run: async () => { await patch(d, {workspace: s}); ctx.toast('Moved to ' + s + '.'); draw(); }}))); }
+  function moveTo(anchor, d) { menu(anchor, SPACES.map((s) => ({label: (d.workspace === s ? '✓ ' : '') + s, run: async () => { const was = d.workspace; await patch(d, {workspace: s}); draw(); window.HQ_UI.undoable('Moved to ' + s + '.', async () => { await patch(d, {workspace: was}); draw(); }); }}))); }
   function exportDoc(d, kind) {
     const html = clean(toHtml(d.body)), name = fileName(d);
     if (kind === 'md') download(name + '.md', 'text/markdown', '# ' + d.title + '\n\n' + toMarkdown(html));

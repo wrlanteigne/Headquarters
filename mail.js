@@ -195,9 +195,9 @@
       const acts = el('div', 'reader-acts');
       acts.append(
         btn('Reply', 'primary', () => { sh.close(); compose({to: replyTo, subject: /^re:/i.test(m.subject) ? m.subject : 'Re: ' + m.subject, threadId: m.threadId, inReplyTo: hdr(lastMsg.payload, 'Message-ID'), refs: (hdr(lastMsg.payload, 'References') + ' ' + hdr(lastMsg.payload, 'Message-ID')).trim(), quote: {who: lw.name, when: new Date(+lastMsg.internalDate), text: bodyOf(lastMsg.payload).text || lastMsg.snippet || ''}}); }),
-        btn('Archive', '', async () => { try { await modify(m.id, [], ['INBOX']); M.list = M.list.filter((x) => x.threadId !== m.threadId); sh.close(); draw(); refreshBadges(); ctx.toast('Archived.'); } catch (e) { ctx.toast('Couldn’t archive: ' + e.message); } }),
+        btn('Archive', '', async () => { try { await modify(m.id, [], ['INBOX']); const idx = M.list.indexOf(m); M.list = M.list.filter((x) => x.threadId !== m.threadId); sh.close(); draw(); refreshBadges(); window.HQ_UI.undoable('Archived “' + m.subject.slice(0, 40) + '”.', async () => { await modify(m.id, ['INBOX'], []); M.list.splice(Math.max(0, idx), 0, m); draw(); refreshBadges(); }); } catch (e) { ctx.toast('Couldn’t archive: ' + e.message); } }),
         btn(m.starred ? '★ Starred' : '☆ Star', 'ghost', async () => { try { await modify(m.id, m.starred ? [] : ['STARRED'], m.starred ? ['STARRED'] : []); m.starred = !m.starred; openMsg(m); } catch (e) { ctx.toast(e.message); } }),
-        btn('Mark unread', 'ghost', async () => { try { await modify(m.id, ['UNREAD'], []); m.unread = true; sh.close(); draw(); refreshBadges(); } catch (e) { ctx.toast(e.message); } }),
+        btn('Mark unread', 'ghost', async () => { try { await modify(m.id, ['UNREAD'], []); m.unread = true; sh.close(); draw(); refreshBadges(); window.HQ_UI.undoable('Marked unread.', async () => { await modify(m.id, [], ['UNREAD']); m.unread = false; draw(); refreshBadges(); }); } catch (e) { ctx.toast(e.message); } }),
         btn(m.tags.includes('VIP') ? 'Always important ✓' : 'Always important', 'ghost', () => { senderRule('mail_vip', m.who.email); sh.close(); }),
         btn('Mute sender', 'ghost', () => { senderRule('mail_mute', m.who.email); sh.close(); }),
         btn('Add as lead', 'ghost', () => { sh.close(); if (window.HQ_EXTRAS) window.HQ_EXTRAS.leadForm({business: m.who.name, contact: m.who.name, email: m.who.email, stage: 'replied', next_step: 'Reply to their email'}); })
@@ -205,14 +205,15 @@
       wrap.append(acts);
     } catch (e) { wrap.replaceChildren(el('p', 'msg', e.message === 'signin' ? 'Gmail sign-in expired. Close this and tap Connect Gmail.' : 'Couldn’t open: ' + e.message)); }
   }
-  async function senderRule(key, email) {
+  async function senderRule(key, email, silent) {
+    const before = {mail_vip: (setting('mail_vip') || []).slice(), mail_mute: (setting('mail_mute') || []).slice()};
     const other = key === 'mail_vip' ? 'mail_mute' : 'mail_vip';
     const cur = (setting(key) || []).filter((x) => x !== email); cur.push(email);
     const oth = (setting(other) || []).filter((x) => x !== email);
     await saveSetting(key, cur); await saveSetting(other, oth);
     M.list.forEach((m) => Object.assign(m, score(m)));
     draw(); refreshBadges();
-    ctx.toast(key === 'mail_vip' ? 'Mail from ' + email + ' will always be Important.' : 'Mail from ' + email + ' will go to Low.');
+    if (!silent) window.HQ_UI.undoable(key === 'mail_vip' ? email + ' is always Important now.' : email + ' is muted.', async () => { await saveSetting('mail_vip', before.mail_vip); await saveSetting('mail_mute', before.mail_mute); M.list.forEach((x) => Object.assign(x, score(x))); draw(); refreshBadges(); });
   }
   async function saveSetting(key, value) {
     const D = ctx.D; D.settings = D.settings || [];
@@ -264,14 +265,21 @@
       return {raw: b64e(lines.join('\r\n') + '\r\n\r\n' + v.body.replace(/\r?\n/g, '\r\n')), threadId: o.threadId || undefined};
     };
     const busy = (on) => { [send, save].concat(del ? [del] : []).forEach((b) => { b.disabled = on; }); };
-    send.addEventListener('click', async () => {
+    send.addEventListener('click', () => {
       let msg; try { msg = raw(); } catch (e) { ctx.toast(e.message); return; }
-      busy(true); send.textContent = 'Sending…';
-      try {
-        if (o.draftId) { await api('drafts/' + o.draftId, {method: 'PUT', body: JSON.stringify({id: o.draftId, message: msg})}); await api('drafts/send', {method: 'POST', body: JSON.stringify({id: o.draftId})}); }
-        else await api('messages/send', {method: 'POST', body: JSON.stringify(msg)});
-        sh.close(); ctx.toast('Sent.'); load();
-      } catch (e) { busy(false); send.textContent = 'Send'; ctx.toast(e.message === 'signin' ? 'Gmail sign-in expired. Tap Connect Gmail, then send again.' : 'Not sent: ' + e.message); draw(); }
+      const v = U.values(f);
+      sh.close();
+      // Undo send: wait 5 seconds before it actually goes
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          if (o.draftId) { await api('drafts/' + o.draftId, {method: 'PUT', body: JSON.stringify({id: o.draftId, message: msg})}); await api('drafts/send', {method: 'POST', body: JSON.stringify({id: o.draftId})}); }
+          else await api('messages/send', {method: 'POST', body: JSON.stringify(msg)});
+          U.notice('Sent to ' + v.to.replace(/<.*?>/, '').trim() + '.'); load();
+        } catch (e) { ctx.toast(e.message === 'signin' ? 'Not sent: Google sign-in expired. Reconnect, then send again.' : 'Not sent: ' + e.message); compose(Object.assign({}, o, {to: v.to, subject: v.subject, body: v.body, quote: null})); }
+      }, 5000);
+      U.undoable('Sending in 5 seconds…', () => { cancelled = true; clearTimeout(timer); compose(Object.assign({}, o, {to: v.to, subject: v.subject, body: v.body, quote: null})); }, {ms: 5000});
     });
     save.addEventListener('click', async () => {
       let msg; try { msg = raw(); } catch (e) { ctx.toast(e.message); return; }
@@ -284,7 +292,9 @@
     });
     if (del) del.addEventListener('click', async () => {
       busy(true);
-      try { await api('drafts/' + o.draftId, {method: 'DELETE'}); sh.close(); ctx.toast('Draft deleted.'); M.drafts = M.drafts.filter((d) => d.id !== o.draftId); draw(); }
+      let msg = null; try { msg = raw(); } catch (e) { /* no recipient */ }
+      try { await api('drafts/' + o.draftId, {method: 'DELETE'}); sh.close(); M.drafts = M.drafts.filter((d) => d.id !== o.draftId); draw();
+        if (msg) window.HQ_UI.undoable('Draft deleted.', async () => { await api('drafts', {method: 'POST', body: JSON.stringify({message: msg})}); load(); }); else ctx.toast('Draft deleted.'); }
       catch (e) { busy(false); ctx.toast(e.message); }
     });
   }
@@ -314,13 +324,21 @@
   }
   async function bulk(kind) {
     const ids = [...M.sel]; if (!ids.length) return;
+    M.all_before = M.list.slice();
     const ops = {archive: [[], ['INBOX']], read: [[], ['UNREAD']], unread: [['UNREAD'], []], star: [['STARRED'], []]}[kind];
     try {
       await api('messages/batchModify', {method: 'POST', body: JSON.stringify({ids, addLabelIds: ops[0], removeLabelIds: ops[1]})});
       if (kind === 'archive') M.list = M.list.filter((m) => !M.sel.has(m.id));
       else M.list.forEach((m) => { if (M.sel.has(m.id)) { if (kind === 'read') m.unread = false; if (kind === 'unread') m.unread = true; if (kind === 'star') m.starred = true; } });
-      ctx.toast({archive: 'Archived ', read: 'Marked read: ', unread: 'Marked unread: ', star: 'Starred '}[kind] + ids.length + '.');
+      const gone = kind === 'archive' ? M.all_before.filter((x) => ids.includes(x.id)) : [];
+      const prev = {}; M.all_before.forEach((x) => { if (ids.includes(x.id)) prev[x.id] = {unread: x.unread, starred: x.starred}; });
       M.sel.clear(); draw(); refreshBadges();
+      window.HQ_UI.undoable({archive: 'Archived ', read: 'Marked read: ', unread: 'Marked unread: ', star: 'Starred '}[kind] + ids.length + ' email' + (ids.length === 1 ? '' : 's') + '.', async () => {
+        await api('messages/batchModify', {method: 'POST', body: JSON.stringify({ids, addLabelIds: ops[1].filter((l) => kind !== 'read' || l === 'UNREAD'), removeLabelIds: ops[0]})});
+        if (kind === 'archive') M.list = M.list.concat(gone).sort((a, b) => b.date - a.date);
+        M.list.forEach((x) => { if (prev[x.id]) { x.unread = prev[x.id].unread; x.starred = prev[x.id].starred; } });
+        draw(); refreshBadges();
+      });
     } catch (e) { ctx.toast(e.message === 'signin' ? 'Reconnect Google first.' : e.message); }
   }
   function draw() {

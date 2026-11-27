@@ -53,5 +53,44 @@
     return new Date(d).toLocaleDateString('en-CA', {month: 'short', day: 'numeric'});
   };
 
-  window.HQ_UI = {el, btn, sheet, field, values, ago};
+  // ---------- Undo ----------
+  // Anything that changes data calls undoable(message, undoFn). A bar pops up with an
+  // Undo button for a few seconds, and ⌘Z / Ctrl+Z (outside text boxes) undoes the last one.
+  const stack = [];
+  let bar = null, hideT = null;
+  function showBar(msg, opts) {
+    if (!bar) {
+      bar = el('div', 'undo-bar'); bar.setAttribute('role', 'status'); bar.setAttribute('aria-live', 'polite');
+      document.body.append(bar);
+    }
+    bar.replaceChildren(el('span', 'ub-msg', msg));
+    if (!(opts && opts.noUndo)) { const u = el('button', 'ub-undo', 'Undo'); u.type = 'button'; u.addEventListener('click', () => undo()); bar.append(u); }
+    const x = el('button', 'ub-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Dismiss'); x.addEventListener('click', hide); bar.append(x);
+    bar.classList.add('show');
+    clearTimeout(hideT); hideT = setTimeout(hide, (opts && opts.ms) || 7000);
+  }
+  function hide() { if (bar) bar.classList.remove('show'); }
+  function undoable(msg, fn, opts) {
+    stack.push({msg, fn}); if (stack.length > 30) stack.shift();
+    showBar(msg, opts);
+  }
+  let busy = false;
+  async function undo() {
+    if (busy) return;
+    const it = stack.pop();
+    if (!it) { showBar('Nothing to undo', {noUndo: true, ms: 2000}); return; }
+    busy = true; hide();
+    try { await it.fn(); showBar('Undone: ' + it.msg.replace(/\.$/, ''), {noUndo: true, ms: 2500}); }
+    catch (e) { showBar('Couldn’t undo: ' + (e && e.message || e), {noUndo: true, ms: 4000}); }
+    busy = false;
+  }
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey) || e.shiftKey || e.key.toLowerCase() !== 'z') return;
+    const a = document.activeElement;
+    if (a && (/INPUT|TEXTAREA|SELECT/.test(a.tagName) || a.isContentEditable)) return; // let text boxes undo typing
+    const app = document.getElementById('app'); if (!app || app.hidden) return;
+    e.preventDefault(); undo();
+  });
+
+  window.HQ_UI = {el, btn, sheet, field, values, ago, undoable, undo, notice: (m) => showBar(m, {noUndo: true, ms: 3000}), canUndo: () => stack.length > 0};
 })();

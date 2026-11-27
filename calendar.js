@@ -132,14 +132,25 @@
       const q = '?conferenceDataVersion=1&sendUpdates=' + (people.length ? 'all' : 'none');
       save.disabled = true; save.textContent = 'Saving…';
       try {
-        if (isNew) { await g().fetch(CAL + 'calendars/' + encodeURIComponent(cal) + '/events' + q, {method: 'POST', body: JSON.stringify(body)}); saveSetting('cal_default', cal); }
-        else await g().fetch(CAL + 'calendars/' + encodeURIComponent(cal) + '/events/' + encodeURIComponent(e.id) + q, {method: 'PATCH', body: JSON.stringify(body)});
-        sh.close(); ctx.toast(isNew ? 'Added to your calendar.' : 'Saved.'); load(true);
+        const base = CAL + 'calendars/' + encodeURIComponent(cal) + '/events';
+        if (isNew) {
+          const made = await g().fetch(base + q, {method: 'POST', body: JSON.stringify(body)}); saveSetting('cal_default', cal);
+          window.HQ_UI.undoable('Added “' + v.title + '”.', async () => { await g().fetch(base + '/' + encodeURIComponent(made.id) + '?sendUpdates=' + (people.length ? 'all' : 'none'), {method: 'DELETE'}); load(true); });
+        } else {
+          const r0 = e.raw, before = {summary: r0.summary || '', location: r0.location || '', description: r0.description || '', start: r0.start, end: r0.end, attendees: r0.attendees || []};
+          await g().fetch(base + '/' + encodeURIComponent(e.id) + q, {method: 'PATCH', body: JSON.stringify(body)});
+          window.HQ_UI.undoable('Saved “' + v.title + '”.', async () => { await g().fetch(base + '/' + encodeURIComponent(e.id) + '?sendUpdates=none', {method: 'PATCH', body: JSON.stringify(before)}); load(true); });
+        }
+        sh.close(); load(true);
       } catch (err) { save.disabled = false; save.textContent = 'Save'; ctx.toast(err.message === 'signin' ? 'Reconnect Google, then save again.' : 'Not saved: ' + err.message); }
     });
     if (del) del.addEventListener('click', async () => {
       if (del.dataset.sure !== '1') { del.dataset.sure = '1'; del.textContent = 'Tap again to delete'; return; }
-      try { await g().fetch(CAL + 'calendars/' + encodeURIComponent(e.cal.id) + '/events/' + encodeURIComponent(e.id) + '?sendUpdates=' + (e.attendees.length ? 'all' : 'none'), {method: 'DELETE'}); sh.close(); ctx.toast('Deleted.'); load(true); }
+      try {
+        await g().fetch(CAL + 'calendars/' + encodeURIComponent(e.cal.id) + '/events/' + encodeURIComponent(e.id) + '?sendUpdates=' + (e.attendees.length ? 'all' : 'none'), {method: 'DELETE'}); sh.close(); load(true);
+        const r0 = e.raw, copy = {summary: r0.summary, location: r0.location, description: r0.description, start: r0.start, end: r0.end, attendees: r0.attendees, reminders: r0.reminders, colorId: r0.colorId, recurrence: r0.recurrence};
+        window.HQ_UI.undoable('Deleted “' + e.title + '”.', async () => { await g().fetch(CAL + 'calendars/' + encodeURIComponent(e.cal.id) + '/events?sendUpdates=none', {method: 'POST', body: JSON.stringify(copy)}); load(true); });
+      }
       catch (err) { ctx.toast(err.message); }
     });
   }
@@ -291,7 +302,10 @@
         try {
           await g().fetch(CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none'), {method: 'PATCH', body: JSON.stringify({start: {dateTime: s0.toISOString(), timeZone: tz}, end: {dateTime: e0.toISOString(), timeZone: tz}})});
           const n = ev.start.toLocaleDateString('en-CA', {weekday: 'short'}) + ' ' + hm(ev.start) + '–' + hm(ev.end);
-          ctx.toast(ev.title + ' → ' + n + (ev.attendees.length ? '. Guests were told.' : ''));
+          window.HQ_UI.undoable(ev.title + ' → ' + n + (ev.attendees.length ? ' (guests told)' : '') + '.', async () => {
+            await g().fetch(CAL + 'calendars/' + encodeURIComponent(ev.cal.id) + '/events/' + encodeURIComponent(ev.id) + '?sendUpdates=' + (ev.attendees.length ? 'all' : 'none'), {method: 'PATCH', body: JSON.stringify({start: {dateTime: old[0].toISOString(), timeZone: tz}, end: {dateTime: old[1].toISOString(), timeZone: tz}})});
+            ev.start = old[0]; ev.end = old[1]; draw();
+          });
         } catch (err) { ev.start = old[0]; ev.end = old[1]; draw(); ctx.toast(err.message === 'signin' ? 'Reconnect Google, then try again.' : 'Couldn’t move it: ' + err.message); }
       };
       function end() { clearTimeout(st.timer); S.drag = null; holdScroll(false); b.classList.remove('dragging'); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); }

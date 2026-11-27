@@ -255,7 +255,7 @@
           const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], {type: 'application/json'})); a.download = 'hq-data-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.append(a); a.click(); setTimeout(() => a.remove(), 500);
         })),
         action('Reload HQ', 'Fetch the newest version and data', btn('Reload', 'mini', async () => { try { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } catch (e) { /* ignore */ } location.reload(); })),
-        action('Reset settings', 'Put every option on this page back to how it started', (() => { const b = btn('Reset', 'mini'); b.addEventListener('click', () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to reset'; return; } P = Object.assign({}, DEFAULTS); set('name', DEFAULTS.name); ctx.toast('Settings reset.'); render(); }); return b; })())
+        action('Reset settings', 'Put every option on this page back to how it started', (() => { const b = btn('Reset', 'mini'); b.addEventListener('click', () => { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Tap again to reset'; return; } const before = Object.assign({}, P); P = Object.assign({}, DEFAULTS); set('name', DEFAULTS.name); render(); window.HQ_UI.undoable('Settings reset.', () => { P = before; set('name', before.name); render(); }); }); return b; })())
       ])],
       ['about', 'About', section('about', 'About HQ', null, [
         action('How HQ works', 'A quick tour of every page', btn('Open guide', 'mini', () => window.HQ_EXTRAS && window.HQ_EXTRAS.guide())),

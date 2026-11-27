@@ -109,14 +109,23 @@
     if (!row) { row = {user_id: ctx.user.id, date: t, contacted: 0, replies: 0, previews: 0, signed: 0}; D.outreach.push(row); }
     row[key] = (+row[key] || 0) + 1;
     await ctx.sb.from('outreach').upsert({user_id: ctx.user.id, date: t, contacted: row.contacted, replies: row.replies, previews: row.previews, signed: row.signed}, {onConflict: 'user_id,date'});
+    return {key, date: t};
   }
-  async function moveLead(l, stage) {
+  async function unbump(b) {
+    if (!b) return;
+    const row = ctx.D.outreach.find((r) => r.date === b.date); if (!row) return;
+    row[b.key] = Math.max(0, (+row[b.key] || 0) - 1);
+    await ctx.sb.from('outreach').upsert({user_id: ctx.user.id, date: b.date, contacted: row.contacted, replies: row.replies, previews: row.previews, signed: row.signed}, {onConflict: 'user_id,date'});
+  }
+  async function moveLead(l, stage, silent) {
     const was = l.stage; if (was === stage) return;
     l.stage = stage; l.updated_at = new Date().toISOString();
     ctx.rerender();
     if (await save('leads', {stage, updated_at: l.updated_at}, {id: l.id})) {
       const order = STAGES.map((s) => s[0]);
-      if (order.indexOf(stage) > order.indexOf(was) && stage !== 'lost') { await bumpOutreach(stage); ctx.toast(l.business + ' → ' + STAGES.find((s) => s[0] === stage)[1] + '. Logged in today’s outreach.'); ctx.rerender(); }
+      let bumped = null;
+      if (!silent && order.indexOf(stage) > order.indexOf(was) && stage !== 'lost') { bumped = await bumpOutreach(stage); ctx.rerender(); }
+      if (!silent) window.HQ_UI.undoable(l.business + ' → ' + STAGES.find((s) => s[0] === stage)[1] + (bumped ? ' (counted in outreach)' : '') + '.', async () => { await moveLead(l, was, true); await unbump(bumped); ctx.rerender(); });
     }
   }
   function pipeline() {
@@ -186,11 +195,13 @@
       if (isNew) {
         const {data, error} = await ctx.sb.from('leads').insert(Object.assign({user_id: ctx.user.id}, row)).select().single();
         if (error) { ok.disabled = false; ctx.toast('Not saved: ' + error.message); return; }
-        ctx.D.leads.push(data); if (STAGE_COUNTER[v.stage]) await bumpOutreach(v.stage);
+        ctx.D.leads.push(data); const bmp = STAGE_COUNTER[v.stage] ? await bumpOutreach(v.stage) : null;
+        window.HQ_UI.undoable('Added ' + data.business + '.', async () => { const {error: e2} = await ctx.sb.from('leads').delete().eq('id', data.id); if (e2) throw e2; ctx.D.leads = ctx.D.leads.filter((q) => q.id !== data.id); await unbump(bmp); ctx.rerender(); });
       } else {
-        const prev = l.stage;
+        const prev = l.stage, old = {}; Object.keys(row).forEach((k) => { old[k] = l[k] === undefined ? null : l[k]; });
         if (!(await save('leads', row, {id: l.id}))) { ok.disabled = false; return; }
         Object.assign(l, row);
+        window.HQ_UI.undoable('Saved ' + l.business + '.', async () => { if (!(await save('leads', old, {id: l.id}))) throw new Error('not saved'); Object.assign(l, old); ctx.rerender(); });
         const order = STAGES.map((s) => s[0]);
         if (order.indexOf(v.stage) > order.indexOf(prev) && v.stage !== 'lost') await bumpOutreach(v.stage);
       }
@@ -201,6 +212,8 @@
       const {error} = await ctx.sb.from('leads').delete().eq('id', l.id);
       if (error) { ctx.toast(error.message); return; }
       ctx.D.leads = ctx.D.leads.filter((x) => x.id !== l.id); sh.close(); ctx.rerender();
+      const copy = Object.assign({}, l);
+      window.HQ_UI.undoable('Deleted ' + l.business + '.', async () => { const {data, error: e2} = await ctx.sb.from('leads').insert(copy).select().single(); if (e2) throw e2; ctx.D.leads.push(data); ctx.rerender(); });
     });
   }
 
@@ -221,7 +234,7 @@
       const li = el('li', 'item');
       li.append(el('span', 'idea-t' + (n.pinned ? ' pinned' : ''), n.text));
       const pin = btn(n.pinned ? '★' : '☆', 'mini', async () => { n.pinned = !n.pinned; await save('notes', {pinned: n.pinned}, {id: n.id}); ideas(); }); pin.setAttribute('aria-label', n.pinned ? 'Unpin' : 'Pin');
-      const done = btn('Done', 'mini', async () => { n.done = true; await save('notes', {done: true}, {id: n.id}); ideas(); });
+      const done = btn('Done', 'mini', async () => { n.done = true; await save('notes', {done: true}, {id: n.id}); ideas(); window.HQ_UI.undoable('Idea marked done.', async () => { n.done = false; await save('notes', {done: false}, {id: n.id}); ideas(); }); });
       li.append(pin, done); ul.append(li);
     });
     box.replaceChildren(head, add, ul);
@@ -229,7 +242,8 @@
   async function addIdea(text) {
     const {data, error} = await ctx.sb.from('notes').insert({user_id: ctx.user.id, kind: 'idea', text}).select().single();
     if (error) { ctx.toast('Not saved: ' + error.message); return; }
-    ctx.D.notes.push(data); ideas(); ctx.toast('Idea saved (Goals tab).');
+    ctx.D.notes.push(data); ideas();
+    window.HQ_UI.undoable('Idea saved to Goals.', async () => { await ctx.sb.from('notes').delete().eq('id', data.id); ctx.D.notes = ctx.D.notes.filter((q) => q.id !== data.id); ideas(); });
   }
 
   // =========================================================
@@ -331,15 +345,18 @@
       ['✦', 'Idea', () => simple('New idea', [U.field('Idea', 'text', 'textarea', '', {rows: 3})], (v) => v.text && addIdea(v.text))],
       ['⚑', 'Reminder', () => simple('Remind me', [U.field('What', 'title', 'text', ''), U.field('Priority', 'priority', 'select', null, {options: [['med', 'Medium'], ['high', 'High'], ['low', 'Low']]})], async (v) => {
         if (!v.title) return; const row = {id: nid('w'), priority: v.priority, area: 'Me', title: v.title.slice(0, 60), item: v.title, status: 'open'};
-        if (await save('attention', row)) { ctx.D.attention.push(Object.assign({user_id: ctx.user.id, created_at: new Date().toISOString()}, row)); ctx.rerender(); ctx.toast('Added to Needs you.'); }
+        if (await save('attention', row)) { ctx.D.attention.push(Object.assign({user_id: ctx.user.id, created_at: new Date().toISOString()}, row)); ctx.rerender(); window.HQ_UI.undoable('Added to Needs you.', async () => { await ctx.sb.from('attention').delete().eq('id', row.id); ctx.D.attention = ctx.D.attention.filter((q) => q.id !== row.id); ctx.rerender(); }); }
       })],
       ['🏋', 'Gym', () => simple('Log gym', [U.field('Date', 'date', 'date', today()), U.field('Session', 'session', 'select', null, {options: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Full body', 'Cardio'].map((x) => [x, x])}), U.field('Bodyweight (lbs, optional)', 'bw', 'number', '')], async (v) => {
-        const row = {date: v.date || today(), session: v.session, bodyweight_lbs: v.bw ? +v.bw : null};
-        if (await save('gym', row)) { ctx.D.gym.push(row); ctx.rerender(); ctx.toast('Gym logged. ' + (ctx.D.gym.filter((g) => g.date >= ymd(new Date(Date.now() - ((new Date().getDay() + 6) % 7) * 864e5))).length) + ' this week.'); }
+        const row = {user_id: ctx.user.id, date: v.date || today(), session: v.session, bodyweight_lbs: v.bw ? +v.bw : null};
+        const {data, error} = await ctx.sb.from('gym').insert(row).select().single();
+        if (error) { ctx.toast('Not saved: ' + error.message); return; }
+        ctx.D.gym.push(data); ctx.rerender();
+        window.HQ_UI.undoable('Gym logged. ' + ctx.D.gym.filter((g) => g.date >= ymd(new Date(Date.now() - ((new Date().getDay() + 6) % 7) * 864e5))).length + ' this week.', async () => { await ctx.sb.from('gym').delete().eq('id', data.id); ctx.D.gym = ctx.D.gym.filter((q) => q.id !== data.id); ctx.rerender(); });
       })],
       ['$', 'Spent', () => simple('Log spending', [U.field('What', 'item', 'text', ''), U.field('Amount (CAD)', 'amt', 'number', ''), U.field('Kind', 'cat', 'select', null, {options: [['Food', 'Food'], ['Fun', 'Fun'], ['Transport', 'Transport'], ['Shopping', 'Shopping'], ['Other', 'Other']]})], async (v) => {
         if (!v.item || !v.amt) return; const row = {id: nid('x'), month: today().slice(0, 7), item: v.item, category: v.cat, type: 'spent', amount_cad: +v.amt, note: 'Logged in HQ ' + today()};
-        if (await save('expenses', row)) { ctx.D.expenses.push(row); ctx.rerender(); ctx.toast('Logged ' + money(+v.amt, 2) + '.'); }
+        if (await save('expenses', row)) { ctx.D.expenses.push(row); ctx.rerender(); window.HQ_UI.undoable('Logged ' + money(+v.amt, 2) + ' for ' + v.item + '.', async () => { await ctx.sb.from('expenses').delete().eq('id', row.id); ctx.D.expenses = ctx.D.expenses.filter((q) => q.id !== row.id); ctx.rerender(); }); }
       })]
     ];
     let sh;
@@ -372,6 +389,7 @@
       {k: 'Do', t: 'Start a focus block', run: () => { go('today'); setTimeout(() => $('focus-next').click(), 50); }},
       {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
       {k: 'Help', t: 'How HQ works', run: guide},
+      {k: 'Do', t: 'Undo the last change (⌘Z)', run: () => window.HQ_UI.undo()},
       {k: 'Go to', t: 'Settings · dark mode, colours, mail, password…', run: () => go('settings')},
       ...(window.HQ_SCHOOL ? window.HQ_SCHOOL.links().map((l) => ({k: 'Open', t: l.name + (l.sub ? ' · ' + l.sub : ''), run: () => window.HQ_SCHOOL.go(l)})) : [])
     ];
@@ -413,6 +431,7 @@
       ['Money · Goals', 'Income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],
       ['Automations', 'What Claude runs for you each day and everything it did lately.'],
       ['Subscriptions', 'Everything you pay for every month, business and personal.'],
+      ['Undo', 'Clicked something by accident? Tap Undo on the bar at the bottom, or press ⌘Z (Ctrl+Z). Works for ticks, leads, docs, email, calendar and more. Sent emails wait 5 seconds so you can stop them.'],
       ['Shortcuts', '＋ button (bottom right): add an email, event, lead, doc, idea, reminder, gym session or spending. ⌘K (or the search box): find anything in HQ. Press ? for this guide.'],
       ['Ask Claude', 'Anything HQ can’t do yet, ask Claude in chat. It can read and change HQ’s data for you.']
     ].forEach(([k, v]) => { const d = el('div', 'g-row'); d.append(el('b', '', k), el('p', '', v)); w.append(d); });

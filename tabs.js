@@ -56,20 +56,24 @@
     b.addEventListener('click', async () => {
       li.hidden = true;
       const {error} = await ctx.sb.from('attention').update({status: 'done'}).eq('id', r.id);
-      if (error) { li.hidden = false; ctx.toast('That wasn’t cleared. Try again.'); } else { r.status = 'done'; ctx.rerender(); }
+      if (error) { li.hidden = false; ctx.toast('That wasn’t cleared. Try again.'); } else {
+        r.status = 'done'; ctx.rerender();
+        window.HQ_UI.undoable('Cleared “' + (r.title || r.item) + '”.', async () => { const {error: e2} = await ctx.sb.from('attention').update({status: 'open'}).eq('id', r.id); if (e2) throw e2; r.status = 'open'; ctx.rerender(); });
+      }
     });
     li.append(d, b);
     return li;
   }
 
-  async function tapOut(ctx, key, delta) {
+  async function tapOut(ctx, key, delta, silent) {
     const t = ctx.C.t;
     let row = ctx.D.outreach.find((r) => r.date === t);
     if (!row) { row = {user_id: ctx.user.id, date: t, contacted: 0, replies: 0, previews: 0, signed: 0}; ctx.D.outreach.push(row); }
     row[key] = Math.max(0, (+row[key] || 0) + delta);
     ctx.rerender();
     const {error} = await ctx.sb.from('outreach').upsert({user_id: ctx.user.id, date: t, contacted: row.contacted, replies: row.replies, previews: row.previews, signed: row.signed}, {onConflict: 'user_id,date'});
-    if (error) ctx.toast('That wasn’t saved. Try again.');
+    if (error) { ctx.toast('That wasn’t saved. Try again.'); return; }
+    if (!silent) window.HQ_UI.undoable((delta > 0 ? 'Added 1 to ' : 'Took 1 off ') + ({contacted: 'contacted', replies: 'replies', previews: 'previews', signed: 'signed'}[key] || key) + '.', () => tapOut(ctx, key, -delta, true));
   }
 
   function renderToday(ctx) {

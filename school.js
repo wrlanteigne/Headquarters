@@ -28,12 +28,13 @@
     if (/^mailto:/.test(l.url) && window.HQ_MAIL) { window.HQ_MAIL.compose({to: l.url.slice(7)}); return; }
     window.open(l.url, '_blank', 'noopener');
   }
-  async function saveLinks(v) {
+  async function saveLinks(v, silent) {
     const D = ctx.D; D.settings = D.settings || [];
+    const before = links().map((l) => Object.assign({}, l));
     const row = {user_id: ctx.user.id, key: 'school_links', value: v};
     const i = D.settings.findIndex((x) => x.key === 'school_links'); if (i >= 0) D.settings[i] = row; else D.settings.push(row);
     const {error} = await ctx.sb.from('settings').upsert(row, {onConflict: 'user_id,key'});
-    if (error) ctx.toast('Not saved: ' + error.message); else ctx.toast('Links saved.');
+    if (error) ctx.toast('Not saved: ' + error.message); else if (!silent) window.HQ_UI.undoable('School links saved.', () => saveLinks(before, true));
     ctx.rerender();
   }
   function editLinks() {
@@ -63,18 +64,22 @@
   const courseOf = (r) => COURSES.find((c) => c.test(r.unit)) || {k: 'other', name: 'Other', short: '', color: 'var(--muted)'};
   const isTest = (r) => /^(test|exam)$/i.test(r.kind || '') || /\bexam\b/i.test(r.task);
 
-  async function tick(r, on) {
+  async function tick(r, on, silent) {
     const t = ymd(new Date());
+    const prevDate = r.date, prevAt = r.done_at;
     r.done = on; r.done_at = on ? new Date().toISOString() : null;
     const row = {done: on, done_at: r.done_at};
-    if (on && r.date > t) { r.date = t; row.date = t; } // done early: counts for today, later days keep their order
+    if (on && r.date !== t) { r.date = t; row.date = t; } // done early or late: counts for today and stays in view
     ctx.rerender();
     const {error} = await ctx.sb.from('school_tasks').update(row).eq('id', r.id);
-    if (error) { ctx.toast('That tick wasn’t saved. Try again.'); }
-    else if (on) {
-      const left = ctx.D.tasks.filter((x) => !x.done && x.date <= t).length;
-      ctx.toast(left ? 'Nice. ' + left + ' left for today.' : 'Today’s school is done. 🎉');
-    }
+    if (error) { ctx.toast('That tick wasn’t saved. Try again.'); return; }
+    if (silent) return;
+    const left = ctx.D.tasks.filter((x) => !x.done && x.date <= t).length;
+    window.HQ_UI.undoable(on ? (left ? 'Done. ' + left + ' left today.' : 'Today’s school is done. 🎉') : 'Unticked “' + r.task.slice(0, 40) + '”.', async () => {
+      r.done = !on; r.done_at = prevAt; r.date = prevDate;
+      const {error: e2} = await ctx.sb.from('school_tasks').update({done: !on, done_at: prevAt, date: prevDate}).eq('id', r.id);
+      if (e2) throw e2; ctx.rerender();
+    });
   }
 
   function taskRow(r, t, opts) {
