@@ -125,50 +125,150 @@
       const order = STAGES.map((s) => s[0]);
       let bumped = null;
       if (!silent && order.indexOf(stage) > order.indexOf(was) && stage !== 'lost') { bumped = await bumpOutreach(stage); ctx.rerender(); }
-      if (!silent) window.HQ_UI.undoable(l.business + ' → ' + STAGES.find((s) => s[0] === stage)[1] + (bumped ? ' (counted in outreach)' : '') + '.', async () => { await moveLead(l, was, true); await unbump(bumped); ctx.rerender(); });
+      if (!silent) window.HQ_UI.undoable(l.business + ' → ' + stepOf(stage).tab + (bumped ? ' (counted in outreach)' : '') + '.', async () => { await moveLead(l, was, true); await unbump(bumped); ctx.rerender(); });
     }
+  }
+  const PRI = {A: 'Hot', B: '', C: 'Check first'};
+  // Plain-word steps. Each has one obvious "what happened" button.
+  const STEPS = [
+    {k: 'new', tab: 'To call', empty: 'Nobody left to call. Nice work.', acts: [['Called', 'contacted', 'primary'], ['Not interested', 'lost', 'ghost']]},
+    {k: 'contacted', tab: 'Called', empty: 'Companies you’ve called show up here.', acts: [['Interested', 'replied', 'primary'], ['Not interested', 'lost', 'ghost']]},
+    {k: 'replied', tab: 'Interested', empty: 'When someone says yes to a preview, tap “Interested”.', acts: [['Preview sent', 'preview', 'primary'], ['Not now', 'lost', 'ghost']]},
+    {k: 'preview', tab: 'Preview sent', empty: 'Previews you’ve sent are waiting here.', acts: [['Signed 🎉', 'signed', 'primary'], ['Not now', 'lost', 'ghost']]},
+    {k: 'signed', tab: 'Clients', empty: 'Your first client lands here.', acts: []},
+    {k: 'lost', tab: 'Not now', empty: 'No one here.', acts: [['Back to call list', 'new', '']]}
+  ];
+  const stepOf = (k) => STEPS.find((x) => x.k === k) || STEPS[0];
+
+  // ---------- Cheat sheet (study before you call) ----------
+  const TRADE_TIPS = [
+    [/plumb|mechanical|hvac|heat|gas|sheet metal|refrigerat/i, {who: 'Homeowners with a leak or no heat, often at night or on weekends, plus property managers.', care: 'Speed and trust. People pick whoever answers first and looks legit.', site: 'A big tap-to-call button, an emergency line, service area (Whistler, Squamish, Pemberton…), heat pumps if they do them.', ask: 'Do you take emergency calls, or mostly booked work?', hook: 'Most people find a plumber by searching on their phone in a panic. If you’re not on Google, they call the next guy.'}],
+    [/electric/i, {who: 'Homeowners doing renos, EV chargers, panel upgrades, heat pumps; builders.', care: 'Licensed, insured, shows up on time.', site: 'Services list (EV chargers, panel upgrades, renos), licence and insurance, photos, quote form.', ask: 'Are you doing many EV chargers or panel upgrades these days?', hook: 'People search “EV charger install Squamish” and book whoever has a page for it.'}],
+    [/roof/i, {who: 'Homeowners and stratas with big, pricey jobs, often after snow or storm damage.', care: 'Proof of quality. They compare 2–3 quotes before spending $10k+.', site: 'Job photos, reviews, materials they use, a free-quote form, the warranty.', ask: 'How do people usually find you for a re-roof, referrals or Google?', hook: 'On a $15k job, people check you out online before they ever call. Photos win the quote.'}],
+    [/landscap|garden|tree|irrigat|hedge/i, {who: 'Homeowners, second-home owners and stratas.', care: 'Seeing past work, and booking spring early.', site: 'Before/after photo gallery, services, service area, a “book spring work” form.', ask: 'Is your spring already booking up, or is that still open?', hook: 'Winter is when people plan spring jobs. A site up by February catches all of that.'}],
+    [/paint/i, {who: 'Homeowners, property managers, short-term-rental owners refreshing units.', care: 'Clean, tidy work and a fair quote.', site: 'Before/after photos, interior vs exterior, a free-quote form, reviews.', ask: 'Do you do much interior work in the winter?', hook: 'Painting sells on photos. A gallery does the convincing before you even quote.'}],
+    [/contract|construct|build|carpent|renov|cabinet|millwork|woodwork|custom home|drywall|tile|tiling|floor|mason|stone|concrete|insulat|glass|door/i, {who: 'Homeowners planning renos, second-home owners, architects and designers.', care: 'Quality and that you’ve done jobs like theirs.', site: 'A portfolio of finished projects, services, the area you cover, a contact form.', ask: 'What kind of project do you want more of?', hook: 'Big jobs get vetted online. A portfolio site shows the work your name is on.'}],
+    [/excavat|backhoe|earthwork|lot clearing|site prep/i, {who: 'Builders, lot owners, farms, the municipality.', care: 'Right equipment, available when needed.', site: 'Equipment list, services (driveways, septic, lot clearing), service area, call button.', ask: 'Are you mostly working for builders, or homeowners too?', hook: 'A simple page with your equipment and services gets you found by out-of-town builders.'}],
+    [/clean|maid|housekeep|window|pressure|gutter|junk/i, {who: 'Short-term-rental hosts, second-home owners, property managers, busy families.', care: 'Reliability, trust in their home, easy booking.', site: 'Services and prices or ranges, areas served, a booking or quote form, reviews.', ask: 'Do you do turnovers for Airbnb or rental owners?', hook: 'The corridor is full of rental owners who live elsewhere. They book cleaners online, not by word of mouth.'}],
+    [/chimney|wett/i, {who: 'Homeowners with wood stoves, people buying or selling homes, insurers asking for inspections.', care: 'Certified (WETT), available before winter.', site: 'WETT certification, services, booking form, service area.', ask: 'Do you get many WETT inspection requests from home sales?', hook: 'People need a WETT inspection fast for insurance or a sale, and they search for it.'}],
+    [/handyman|property|maintenance|home services/i, {who: 'Second-home owners who aren’t around, seniors, landlords.', care: 'Trust and reliability. They’re letting you in when they’re not home.', site: 'Services list, area, reviews, a simple “send a job request” form.', ask: 'Do you look after many homes for owners who don’t live here full-time?', hook: 'Out-of-town owners can only find you online. A site makes you the obvious call.'}],
+    [/auto|motorcycle|appliance|equipment repair|small-engine|chainsaw|marine/i, {who: 'Locals with something broken right now.', care: 'Hours, location, what you fix, can they come in today.', site: 'Hours, address and map, services and brands, call button.', ask: 'What do people usually call you for most?', hook: 'People search “mechanic near me” and pick from the map. A site plus Google listing moves you up.'}],
+    [/mov/i, {who: 'People moving in and out of the corridor, seasonal workers.', care: 'Price and availability.', site: 'Services, areas, a quote form, reviews.', ask: 'Is summer your busy season?', hook: 'Movers get booked from a quote form. No site, no quote request.'}],
+    [/weld|metal|fabricat/i, {who: 'Builders, homeowners wanting railings or gates, local businesses.', care: 'Seeing what you can make.', site: 'A gallery of custom work, services, contact form.', ask: 'What’s your favourite kind of custom job to do?', hook: 'Custom metalwork sells on photos. A gallery brings the fun jobs to you.'}],
+    [/fenc|deck/i, {who: 'Homeowners planning summer projects.', care: 'Seeing past work, materials, timeline.', site: 'Photo gallery, materials, a quote form.', ask: 'When do you start booking for spring?', hook: 'Deck and fence jobs get planned in winter, online.'}],
+    [/lock/i, {who: 'Locked-out people and businesses changing locks.', care: 'Speed.', site: 'Big call button, 24/7 info, service area.', ask: 'Do you do 24-hour lockouts?', hook: 'Lockouts are 100% Google searches. Whoever shows up first gets the call.'}],
+    [/pest/i, {who: 'Homeowners and restaurants with a problem now.', care: 'Fast, discreet, it works.', site: 'Pests you handle, call button, area.', ask: 'What do you get called for most around here?', hook: 'Nobody asks friends for a pest guy. They search.'}],
+    [/hot tub/i, {who: 'Homeowners and rental owners.', care: 'Reliable service visits.', site: 'Services, maintenance plans, booking form.', ask: 'Do you service many rental properties?', hook: 'Rental owners book hot tub service online from wherever they live.'}]
+  ];
+  const tipsFor = (trade) => (TRADE_TIPS.find(([re]) => re.test(trade || '')) || [0, {who: 'Local homeowners and businesses.', care: 'Trust and fast answers.', site: 'Services, area, photos, call button.', ask: 'Where does most of your work come from right now?', hook: 'People check a business online before they call. No site means they call someone else.'}])[1];
+  function webState(w, note) {
+    const x = (w || '') + ' ' + (note || '');
+    if (/broken|didn.t load|redirect|errors|retired|failed to load|empty page/i.test(x)) return ['broken', 'Their website is broken', 'Heads up in case nobody’s told you: when I clicked the website on your listing, it ' + (/redirect|unrelated|elsewhere/i.test(x) ? 'went to a totally different site' : /empty/i.test(x) ? 'came up as a blank page' : 'didn’t load') + '. Anyone checking you out right now hits a dead end.'];
+    if (/facebook|social only|instagram|houzz|homestars|yelp|linkedin|bbb/i.test(w || '')) return ['social', 'Only social media, no real site', 'I found your [Facebook/Houzz] page and your work looks great, but there’s no actual website, so you don’t show up when people Google [trade] in [town].'];
+    if (/weak|outdated|portfolio|google sites|wix/i.test(w || '')) return ['weak', 'Has a weak or outdated site', 'I had a look at your current page. It’s pretty bare, and it isn’t doing much for you on Google.'];
+    if (/maybe|unconfirmed|unsure|unchecked|domain exists/i.test(w || '')) return ['check', 'Might have a site, check first', 'Google them before calling. If there’s a real site, skip or pitch a refresh.'];
+    return ['none', 'No website found', 'I was looking for [trade] in [town] on Google and found your listing, but couldn’t find a website for you.'];
+  }
+  function cheatSheet(l) {
+    const T = tipsFor(l.trade), [ws, wLabel, wLine] = webState(l.website, l.note);
+    const fill = (txt) => txt.replace('[trade]', (l.trade || 'trades').split(/\s*[\/(]/)[0].toLowerCase()).replace('[town]', (l.town || 'town').replace(/\s*\(.*$/, ''));
+    const box = el('div', 'cs');
+    const sec = (title, ...nodes) => { const d = el('div', 'cs-sec'); d.append(el('h4', '', title), ...nodes.filter(Boolean)); box.append(d); };
+    const row = (k, v) => { if (!v) return null; const r = el('div', 'cs-kv'); r.append(el('span', 'muted', k), typeof v === 'string' ? el('span', '', v) : v); return r; };
+    const contact = (l.contact || '').trim();
+    const name = contact.replace(/\s*\(.*\)$/, '').replace(/ & .*/, '').split(' ')[0];
+    const shaky = /\(.*(unconfirmed|inferred|per |from |verify|role)/i.test(contact);
+    const phoneEl = (() => { if (!l.phone) return null; const a = el('a', '', l.phone); a.href = 'tel:' + l.phone.split('/')[0].replace(/[^\d+]/g, ''); a.addEventListener('click', (e) => e.stopPropagation()); return a; })();
+    sec('Quick facts',
+      row('Trade', l.trade), row('Town', l.town),
+      row('Ask for', contact ? contact + (shaky ? '  (not 100% sure, ask “is this the owner?”)' : '') : 'No name. Ask “is this the owner?”'),
+      row('Phone', phoneEl), row('Email', l.email),
+      row('Priority', l.priority === 'A' ? 'Hot: strong reason to need a site' : l.priority === 'C' ? 'Check first: may be closed or not local' : 'Good lead'),
+      row('Found in', l.source));
+    const facts = String(l.note || '').split(/\s*[·;]\s*|\.\s+(?=[A-Z])/).map((x) => x.trim().replace(/\.$/, '')).filter((x) => x.length > 2);
+    const ul = el('ul', 'cs-list');
+    ul.append(el('li', 'cs-web cs-' + ws, wLabel + (l.website && !/^none/i.test(l.website) ? ': ' + l.website.replace(/^(broken|weak site|social only|site listed[^:]*|domain[^:]*)\s*:\s*/i, '') : '')));
+    facts.forEach((f) => ul.append(el('li', /NOT name-searched|confirm|verify|check|may be|might|unconfirmed|different company|not be local|inactive|closed|moved/i.test(f) ? 'cs-warn' : '', f)));
+    sec('What we found online', ul);
+    const say = el('blockquote', 'cs-say', fill(wLine));
+    sec('Your opener', el('p', 'small', 'Hi' + (name && !shaky ? ' ' + name : '') + ', it’s William from Clearform Studio in Whistler. Got 30 seconds?'), say, el('p', 'small muted', 'Then ask: “' + T.ask + '”'));
+    const tu = el('ul', 'cs-list');
+    [['Their customers', T.who], ['What their customers care about', T.care], ['What their site needs', T.site], ['Why it matters', T.hook]].forEach(([k, v]) => { const li = el('li', ''); li.append(el('b', '', k + ': '), document.createTextNode(v)); tu.append(li); });
+    sec('Know the trade: ' + ((l.trade || 'general').split(/\s*[\/(]/)[0]), tu);
+    const warns = facts.filter((f) => /NOT name-searched|confirm|verify|check|may be|might|different company|not be local|inactive|closed|moved/i.test(f));
+    if (warns.length || ws === 'check') sec('Check before you dial', el('p', 'small', 'Google “' + l.business + '” for 30 seconds. ' + (warns[0] ? warns[0] + '.' : 'Make sure they don’t already have a real website.')));
+    const acts = el('div', 'cs-acts');
+    acts.append(btn('Edit details & notes', '', (e) => { e.stopPropagation(); leadForm(l); }));
+    if (window.HQ_CAL) acts.append(btn('Plan a call-back', 'ghost', (e) => { e.stopPropagation(); leadForm(l); setTimeout(() => { const n = document.querySelector('.form [name=next_step]'); if (n) { n.value = n.value || 'Call back'; n.focus(); } }, 80); }));
+    box.append(acts);
+    box.addEventListener('click', (e) => e.stopPropagation());
+    return box;
   }
   function pipeline() {
     const box = $('pipeline'); if (!box) return;
     const leads = ctx.D.leads || [], t = today();
-    const q = (box.dataset.q || '').toLowerCase();
-    const head = el('div', 'panel-h');
-    head.append(el('h2', '', 'Pipeline'));
-    const hb = el('div', 'hrow');
-    const s = el('input', 'mini-search'); s.type = 'search'; s.placeholder = 'Find a lead'; s.value = box.dataset.q || ''; s.setAttribute('aria-label', 'Find a lead');
-    s.addEventListener('input', () => { box.dataset.q = s.value; pipeline(); const n = box.querySelector('.mini-search'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
-    hb.append(s, btn('＋ Lead', 'mini primary', () => leadForm()));
-    head.append(hb);
-    const board = el('div', 'board');
-    STAGES.forEach(([k, label]) => {
-      const col = el('div', 'col');
-      const list = leads.filter((l) => l.stage === k && (!q || (l.business + ' ' + (l.contact || '') + ' ' + (l.town || '')).toLowerCase().includes(q)));
-      col.append((() => { const h = el('div', 'col-h'); h.append(el('span', '', label), el('b', '', String(list.length))); return h; })());
-      col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
-      col.addEventListener('dragleave', () => col.classList.remove('over'));
-      col.addEventListener('drop', (e) => { e.preventDefault(); col.classList.remove('over'); const l = leads.find((x) => x.id === e.dataTransfer.getData('text/plain')); if (l) moveLead(l, k); });
-      list.sort((a, b) => (a.next_date || '9') < (b.next_date || '9') ? -1 : 1).forEach((l) => {
-        const c = el('div', 'lead'); c.draggable = true; c.tabIndex = 0;
-        c.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', l.id));
-        const due = l.next_date && l.next_date <= t && !/signed|lost/.test(k);
-        c.append(el('b', '', l.business));
-        if (l.contact || l.town) c.append(el('span', 'muted small', [l.contact, l.town].filter(Boolean).join(' · ')));
-        if (l.next_step || l.next_date) c.append(el('span', 'small' + (due ? ' due' : ''), (l.next_date ? dayName(l.next_date) + ': ' : '') + (l.next_step || '')));
-        const acts = el('div', 'lead-a');
-        const i = STAGES.findIndex((x) => x[0] === k);
-        if (i > 0) acts.append(btn('‹', 'mini', (e) => { e.stopPropagation(); moveLead(l, STAGES[i - 1][0]); }));
-        if (l.email && window.HQ_MAIL) acts.append(btn('✉', 'mini', (e) => { e.stopPropagation(); window.HQ_MAIL.compose({to: l.email}); }));
-        if (i < 4) acts.append(btn('›', 'mini', (e) => { e.stopPropagation(); moveLead(l, STAGES[i + 1][0]); }));
-        acts.querySelectorAll('button').forEach((b, n) => b.setAttribute('aria-label', b.textContent === '‹' ? 'Move back' : b.textContent === '›' ? 'Move forward' : 'Email'));
-        c.append(acts);
-        c.addEventListener('click', () => leadForm(l));
-        c.addEventListener('keydown', (e) => { if (e.key === 'Enter') leadForm(l); });
-        col.append(c);
-      });
-      board.append(col);
+    const q = (box.dataset.q || '').trim().toLowerCase();
+    const cur = box.dataset.step || 'new';
+    const hay = (l) => [l.business, l.contact, l.town, l.trade, l.phone, l.email, l.website].join(' ').toLowerCase();
+    // Header: big search + add
+    const head = el('div', 'pl-head');
+    const s = el('input', 'pl-search'); s.type = 'search'; s.placeholder = 'Search ' + leads.length + ' companies by name, trade, town or phone'; s.value = box.dataset.q || ''; s.setAttribute('aria-label', 'Search companies');
+    s.addEventListener('input', () => { box.dataset.q = s.value; delete box.dataset.show; pipeline(); const n = box.querySelector('.pl-search'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    head.append(s);
+    const script = (ctx.D.docs || []).find((d) => /call script/i.test(d.title || '') && !d.archived);
+    if (script && window.HQ_DOCS) head.append(btn('📞 Script', 'pl-script', () => window.HQ_DOCS.open(script)));
+    head.append(btn('＋ Add', 'primary', () => leadForm()));
+    // Tabs
+    const tabs = el('div', 'pl-tabs');
+    STEPS.forEach((st) => {
+      const n = leads.filter((l) => l.stage === st.k).length;
+      const b = btn('', 'pl-tab' + (!q && cur === st.k ? ' on' : ''), () => { box.dataset.step = st.k; delete box.dataset.q; delete box.dataset.show; pipeline(); });
+      b.append(el('span', '', st.tab), el('b', '', String(n)));
+      tabs.append(b);
     });
-    const tip = el('p', 'muted small', leads.length ? 'Drag a card or use ‹ › to move it. Moving a lead forward also counts it in today’s outreach.' : 'No leads yet. Tap ＋ Lead, or open an email and tap “Add as lead”.');
-    box.replaceChildren(head, board, tip);
+    // List
+    let list = q ? leads.filter((l) => q.split(/\s+/).every((w) => hay(l).includes(w))) : leads.filter((l) => l.stage === cur);
+    const rank = {A: 0, B: 1, C: 2};
+    list = list.slice().sort((a, b) => {
+      const ad = a.next_date && a.next_date <= t ? 0 : 1, bd = b.next_date && b.next_date <= t ? 0 : 1;
+      return ad - bd || (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1) || a.business.localeCompare(b.business);
+    });
+    const cap = +(box.dataset.show || 30);
+    const ul = el('ul', 'pl-list');
+    list.slice(0, cap).forEach((l) => {
+      const st = stepOf(l.stage);
+      const li = el('li', 'pl-row'); li.tabIndex = 0;
+      const info = el('div', 'pl-info');
+      const name = el('div', 'pl-name'); name.append(el('b', '', l.business));
+      if (l.priority === 'A') name.append(el('span', 'pl-hot', 'Hot'));
+      if (l.priority === 'C') name.append(el('span', 'pl-check', 'Check first'));
+      if (q) name.append(el('span', 'pl-stage', st.tab));
+      info.append(name);
+      info.append(el('span', 'muted small', [l.trade, l.town, l.website && !/^none/i.test(l.website) ? l.website : 'No website'].filter(Boolean).join(' · ')));
+      const due = l.next_date && l.next_date <= t && !/signed|lost/.test(l.stage);
+      if (l.next_step || l.next_date) info.append(el('span', 'small' + (due ? ' due' : ' muted'), '→ ' + (l.next_date ? dayName(l.next_date) + ': ' : '') + (l.next_step || 'follow up')));
+      const acts = el('div', 'pl-acts');
+      const ph = (l.phone || '').split('/')[0].replace(/[^\d+]/g, '');
+      if (ph) { const a = el('a', 'btn pl-call', '☎ Call'); a.href = 'tel:' + ph; a.title = l.phone; a.addEventListener('click', (e) => e.stopPropagation()); acts.append(a); }
+      else if (l.email && window.HQ_MAIL) acts.append(btn('✉ Email', 'pl-call', (e) => { e.stopPropagation(); window.HQ_MAIL.compose({to: l.email}); }));
+      st.acts.forEach(([label, to, cls]) => acts.append(btn(label, cls, (e) => { e.stopPropagation(); moveLead(l, to); })));
+      const top = el('div', 'pl-top'); top.append(info, acts);
+      const openNow = box.dataset.open === String(l.id);
+      const more = el('span', 'pl-study', openNow ? '▾ Hide cheat sheet' : '▸ Cheat sheet'); info.append(more);
+      li.append(top);
+      if (openNow) { li.classList.add('open'); li.append(cheatSheet(l)); }
+      const toggle = () => { box.dataset.open = openNow ? '' : String(l.id); pipeline(); };
+      li.addEventListener('click', toggle);
+      li.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === li) toggle(); });
+      ul.append(li);
+    });
+    const parts = [head, tabs];
+    if (q) parts.push(el('p', 'muted small pl-note', list.length + ' match' + (list.length === 1 ? '' : 'es') + ' for “' + box.dataset.q.trim() + '”'));
+    if (!list.length) parts.push(el('p', 'pl-empty', q ? 'No company matches that. Try part of the name, the trade or the town.' : stepOf(cur).empty));
+    else parts.push(ul);
+    if (list.length > cap) parts.push(btn('Show more (' + (list.length - cap) + ' left)', 'ghost pl-more', () => { box.dataset.show = cap + 30; pipeline(); }));
+    parts.push(el('p', 'muted small', 'Hot ones are at the top. Tap a company to open its cheat sheet and study it before you call. After the call, tap what happened and it moves to the next tab by itself.'));
+    box.replaceChildren(...parts);
   }
   function leadForm(l) {
     const isNew = !l || !l.id; l = l || {};
@@ -176,13 +276,17 @@
     f.append(U.field('Business', 'business', 'text', l.business || ''),
       (() => { const r = el('div', 'two'); r.append(U.field('Contact name', 'contact', 'text', l.contact || ''), U.field('Town', 'town', 'text', l.town || '')); return r; })(),
       (() => { const r = el('div', 'two'); r.append(U.field('Email', 'email', 'email', l.email || ''), U.field('Phone', 'phone', 'text', l.phone || '')); return r; })(),
-      U.field('Stage', 'stage', 'select', null, {options: STAGES}),
+      (() => { const r = el('div', 'two'); r.append(U.field('Trade', 'trade', 'text', l.trade || ''), U.field('Priority', 'priority', 'select', null, {options: [['A', 'A · Hot'], ['B', 'B · Good'], ['C', 'C · Check first']]})); return r; })(),
+      U.field('Where they are', 'stage', 'select', null, {options: STEPS.map((x) => [x.k, x.tab])}),
+      U.field('Website now', 'website', 'text', l.website || '', {placeholder: 'None, Facebook only, broken…'}),
       (() => { const r = el('div', 'two'); r.append(U.field('Next step', 'next_step', 'text', l.next_step || '', {placeholder: 'Call back, send preview…'}), U.field('When', 'next_date', 'date', l.next_date || '')); return r; })(),
       U.field('Notes', 'note', 'textarea', l.note || '', {rows: 3}));
     f.querySelector('[name=stage]').value = l.stage || 'new';
+    f.querySelector('[name=priority]').value = l.priority || 'B';
+    if (!isNew && l.source) f.append(el('p', 'muted small', 'From: ' + l.source));
     const ok = btn('Save', 'primary'), acts = [ok];
     if (!isNew && l.email && window.HQ_MAIL) acts.push(btn('Email', '', () => { sh.close(); window.HQ_MAIL.compose({to: l.email}); }));
-    if (!isNew && l.phone) { const a = el('a', 'btn', 'Call'); a.href = 'tel:' + l.phone.replace(/[^\d+]/g, ''); acts.push(a); }
+    if (!isNew && l.phone) { const a = el('a', 'btn', 'Call'); a.href = 'tel:' + l.phone.split('/')[0].replace(/[^\d+]/g, ''); acts.push(a); }
     if (!isNew && window.HQ_CAL) acts.push(btn('Book a call', '', () => { sh.close(); const s = new Date(); s.setDate(s.getDate() + 1); s.setHours(10, 0, 0, 0); window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 1800000), attendees: l.email || '', notes: 'Call with ' + (l.contact || l.business)}); setTimeout(() => { const t = document.querySelector('.evform [name=title]'); if (t) t.value = 'Call: ' + l.business; }, 60); }));
     const del = isNew ? null : btn('Delete', 'ghost');
     if (del) acts.push(del);
@@ -190,7 +294,7 @@
     ok.addEventListener('click', async () => {
       const v = U.values(f);
       if (!v.business) { ctx.toast('Add the business name.'); return; }
-      const row = {business: v.business, contact: v.contact || null, town: v.town || null, email: v.email || null, phone: v.phone || null, stage: v.stage, next_step: v.next_step || null, next_date: v.next_date || null, note: v.note || null, updated_at: new Date().toISOString()};
+      const row = {business: v.business, contact: v.contact || null, town: v.town || null, email: v.email || null, phone: v.phone || null, stage: v.stage, trade: v.trade || null, priority: v.priority || null, website: v.website || null, next_step: v.next_step || null, next_date: v.next_date || null, note: v.note || null, updated_at: new Date().toISOString()};
       ok.disabled = true;
       if (isNew) {
         const {data, error} = await ctx.sb.from('leads').insert(Object.assign({user_id: ctx.user.id}, row)).select().single();
@@ -427,7 +531,7 @@
       ['Learn', 'Founder School: 40 five-minute lessons on building a company and being a CEO, from finding problems to sales, money, systems, leading people and growing big. Each ends with one move for your own business. Your next lesson shows on Today.'],
       ['Calendar', 'Your Google Calendar with Meadow Park shifts, school and follow-ups on top. Click an empty time to add an event.'],
       ['Mail', 'Your Gmail, sorted: Important first (clients, leads, school, work, money), everything else below. Read, reply, write, archive. Claude’s morning drafts wait at the top for you to check and send.'],
-      ['People', 'Your sales pipeline. Every lead is a card: drag it from New → Contacted → Replied → Preview → Signed. Moving it forward counts it in your outreach.'],
+      ['People', 'Every company you could sell a website to. Search at the top, call from the To call tab, then tap what happened (Called, Interested, Preview sent, Signed) and it moves along. Moving forward counts in today’s outreach.'],
       ['Docs', 'Write notes, briefs and scripts, sorted by business. Pick a template, then type / to add headings, lists or to-dos. Saves as you type, and exports to Word, PDF or email.'],
       ['School', 'A card per course with progress and the next test, today’s tasks to tick off, and the week ahead.'],
       ['Money · Goals', 'Income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],

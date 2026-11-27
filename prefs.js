@@ -10,7 +10,7 @@
     name: 'William', place: 'Whistler, BC',
     theme: 'light', accent: '#2563EB', textSize: 'm', compact: false, boot: true, motion: true,
     startTab: 'last', hiddenTabs: [],
-    todayPanels: {learn: true, quote: true, status: true, week: true, inbox: true, calendar: true, follow: true, needs: true, outreach: true},
+    todayPanels: {brief: true, tonight: true, learn: true, quote: true, status: true, week: true, inbox: true, calendar: true, follow: true, needs: true, outreach: true},
     goalFocusHours: 10, goalGym: 5, goalSchool: 10,
     mailRefresh: 3, mailView: 'important', mailMarkRead: true, mailSignature: '', mailNotify: false,
     weekStart: 1, eventLength: 60, calScrollHour: 7,
@@ -142,6 +142,8 @@
         toggle('Animations', 'Turn off for a calmer, faster feel', 'motion')
       ])],
       ['today', 'Today page', section('today', 'Today page', 'Pick what shows on Today.', [
+        toggle('Morning brief', 'Claude’s summary from the 7 am refresh', 'todayPanels', 'brief'),
+        toggle('Tonight', 'Heads-up the evening before a shift or exam', 'todayPanels', 'tonight'),
         toggle('Daily quote', null, 'todayPanels', 'quote'),
         toggle('Countdowns bar', 'Next shift, payday and trips', 'todayPanels', 'status'),
         toggle('This week', 'Focus, gym, outreach and school', 'todayPanels', 'week'),

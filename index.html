@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=23">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -95,13 +95,13 @@
         <p class="hero-sub"><b id="day-done">0</b> of <b id="day-total">0</b> done · <span id="day-kind">—</span> · bed by <span id="day-bed">—</span></p>
       </div>
 
+      <div class="panel tonight" id="today-tonight" hidden></div>
+      <div class="panel brief" id="today-brief" hidden></div>
       <div class="week-strip" id="week-strip" aria-label="This week"></div>
       <div class="two-col">
         <div class="panel" id="today-inbox"></div>
         <div class="panel" id="today-cal" hidden></div>
       </div>
-      <div class="panel" id="today-follow" hidden></div>
-      <div class="panel" id="today-learn"></div>
 
       <div class="panel">
         <div class="panel-h"><h2>Today</h2><span class="muted small">~3,100 kcal · 2.5 L water</span></div>
@@ -114,7 +114,12 @@
         <details class="more" id="needs-more-wrap"><summary id="needs-more">Show all</summary><ul class="items" id="needs-rest"></ul></details>
       </div>
 
-      <div class="panel out-row" id="outreach">
+      <details class="fold" id="today-more">
+        <summary>More for today</summary>
+        <div class="fold-body">
+      <div class="panel" id="today-follow" data-label="follow-ups" hidden></div>
+      <div class="panel" id="today-learn" data-label="lesson"></div>
+      <div class="panel out-row" id="outreach" data-label="outreach">
         <div><h2>Outreach</h2><p class="muted small"><span id="out-week">—</span></p></div>
         <div class="out-ctl">
           <button class="btn mini" type="button" id="out-minus" aria-label="One less contacted">−</button>
@@ -123,6 +128,8 @@
         </div>
         <details class="more out-more"><summary>Replies, previews, signed</summary><div class="steps" id="out-steps"></div></details>
       </div>
+        </div>
+      </details>
     </section>
 
     <section id="school" class="view" hidden><div id="school-root"></div></section>
@@ -135,6 +142,7 @@
         <p class="muted small">60% to savings and 15% to the TFSA come off every cheque. Claude Max gets a flat amount each payday. Spending gets the rest.</p></div>
       <div class="panel"><div class="panel-h"><h2>Long-term savings</h2><span class="muted small" id="bal-asof">—</span></div><div class="cards" id="save-cards"></div></div>
       <div class="panel"><div class="panel-h"><h2>Businesses</h2><span class="muted small">ClearformSheets · Clearform Studio</span></div><div class="cards" id="biz-cards"></div><div id="biz-costs"></div></div>
+      <div class="panel" id="etsy"></div>
       <div class="panel"><div class="panel-h"><h2>Personal spending</h2></div><div class="cards" id="pers-cards"></div><div id="pers-planned"></div></div>
       <div class="panel"><div class="panel-h"><h2>Investments</h2><span class="muted small" id="inv-asof">—</span></div><div class="cards" id="inv-cards"></div><div id="inv-holdings"></div></div>
     </section>
@@ -144,6 +152,7 @@
       <div class="panel"><div class="panel-h"><h2>This week</h2><span class="muted small">Mon–Sun</span></div><div class="cards" id="week-cards"></div>
         <details class="more"><summary>Past weeks</summary><div id="past-weeks"></div></details></div>
       <div class="panel"><div class="panel-h"><h2>Website clients</h2><span class="muted small">Launch $100/mo · Grow $200/mo</span></div><div class="cards" id="mrr-cards"></div><div id="clients"></div></div>
+      <div class="panel" id="payments"></div>
       <div class="panel"><div class="panel-h"><h2>What Claude did lately</h2></div><ul class="log" id="log-list"></ul></div>
     </section>
 
@@ -200,19 +209,20 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=22"></script>
-  <script src="plans.js?v=22"></script>
-  <script src="calc.js?v=22"></script>
-  <script src="ui.js?v=22"></script>
-  <script src="prefs.js?v=22"></script>
-  <script src="tabs.js?v=22"></script>
-  <script src="mail.js?v=22"></script>
-  <script src="calendar.js?v=22"></script>
-  <script src="learn-data.js?v=22"></script>
-  <script src="learn.js?v=22"></script>
-  <script src="docs.js?v=22"></script>
-  <script src="school.js?v=22"></script>
-  <script src="extras.js?v=22"></script>
-  <script src="app.js?v=22"></script>
+  <script src="config.js?v=23"></script>
+  <script src="plans.js?v=23"></script>
+  <script src="calc.js?v=23"></script>
+  <script src="ui.js?v=23"></script>
+  <script src="prefs.js?v=23"></script>
+  <script src="tabs.js?v=23"></script>
+  <script src="mail.js?v=23"></script>
+  <script src="calendar.js?v=23"></script>
+  <script src="learn-data.js?v=23"></script>
+  <script src="learn.js?v=23"></script>
+  <script src="docs.js?v=23"></script>
+  <script src="school.js?v=23"></script>
+  <script src="extras.js?v=23"></script>
+  <script src="more.js?v=23"></script>
+  <script src="app.js?v=23"></script>
 </body>
 </html>
