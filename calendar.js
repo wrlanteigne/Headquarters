@@ -16,7 +16,7 @@
   const parse = (s) => { const [y, m, d] = String(s).slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const days = () => (window.matchMedia('(min-width: 900px)').matches ? 7 : 3);
-  const monday = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const w = (x.getDay() + 6) % 7; return addDays(x, -w); };
+  const monday = (d) => { const ws = window.HQ_PREFS ? +window.HQ_PREFS.get('weekStart') : 1; const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const w = (x.getDay() - ws + 7) % 7; return addDays(x, -w); };
   const hm = (d) => d.toLocaleTimeString('en-CA', {hour: 'numeric', minute: '2-digit'}).replace(':00', '').replace(/\s?([ap])\.?m\.?/i, '$1m');
   const setting = (k) => { const r = ctx && (ctx.D.settings || []).find((s) => s.key === k); return r ? r.value : null; };
 
@@ -102,7 +102,7 @@
     adc.addEventListener('change', times); times();
     // Keep the end an hour after the start when the start moves
     const sd = f.querySelector('[name=sd]'), stt = f.querySelector('[name=st]'), edd = f.querySelector('[name=ed]'), ett = f.querySelector('[name=et]');
-    const shift = () => { const a = new Date(sd.value + 'T' + (stt.value || '09:00')); const b = new Date(a.getTime() + 3600000); edd.value = ymd(b); ett.value = pad(b.getHours()) + ':' + pad(b.getMinutes()); };
+    const shift = () => { const a = new Date(sd.value + 'T' + (stt.value || '09:00')); const b = new Date(a.getTime() + (window.HQ_PREFS ? +window.HQ_PREFS.get('eventLength') : 60) * 60000); edd.value = ymd(b); ett.value = pad(b.getHours()) + ':' + pad(b.getMinutes()); };
     sd.addEventListener('change', () => { if (edd.value < sd.value) edd.value = sd.value; }); stt.addEventListener('change', shift);
     f.append(U.field('Location', 'location', 'text', isNew ? '' : e.location));
     const att = U.field('People to invite', 'attendees', 'text', isNew ? (preset.attendees || '') : e.attendees.join(', '), {placeholder: 'comma, separated, emails'});
@@ -174,7 +174,7 @@
     const last = addDays(S.start, n - 1);
     const label = S.start.toLocaleDateString('en-CA', {month: 'short', day: 'numeric'}) + ' – ' + last.toLocaleDateString('en-CA', S.start.getMonth() === last.getMonth() ? {day: 'numeric'} : {month: 'short', day: 'numeric'});
     nav.append(btn('‹', 'icon', () => { S.start = addDays(S.start, -n); load(); }), el('b', 'cal-label', label), btn('›', 'icon', () => { S.start = addDays(S.start, n); load(); }), btn('Today', 'mini', () => { S.start = n === 7 ? monday(new Date()) : new Date(new Date().setHours(0, 0, 0, 0)); load(); }));
-    head.append(nav, btn('＋ New event', 'primary', () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); form(null, {start: s, end: new Date(s.getTime() + 3600000)}); }));
+    head.append(nav, btn('＋ New event', 'primary', () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); form(null, {start: s, end: new Date(s.getTime() + (window.HQ_PREFS ? +window.HQ_PREFS.get('eventLength') : 60) * 60000)}); }));
     out.push(head);
     // Layer chips
     const chips = el('div', 'chips left cal-chips');
@@ -215,7 +215,7 @@
         if (col._dragged) { col._dragged = false; return; }
         const y = ev.offsetY; const mins = Math.floor((y / ROW) * 2) * 30 + H0 * 60;
         const s = new Date(d); s.setHours(0, mins, 0, 0);
-        form(null, {start: s, end: new Date(s.getTime() + 3600000)});
+        form(null, {start: s, end: new Date(s.getTime() + (window.HQ_PREFS ? +window.HQ_PREFS.get('eventLength') : 60) * 60000)});
       });
       const evs = lanes(all.filter((e) => !e.allDay && e.start < addDays(d, 1) && e.end > d).map((e) => Object.assign({}, e, {start: e.start < d ? d : e.start, end: e.end > addDays(d, 1) ? addDays(d, 1) : e.end, orig: e})));
       evs.forEach((e) => {
@@ -236,7 +236,7 @@
     out.push(el('p', 'muted small', (window.matchMedia('(pointer: coarse)').matches ? 'Tap an empty slot to add an event. Hold an event, then drag to move it, or drag its bottom edge to change the end. ' : 'Click or drag across an empty slot to add an event. Drag an event to move it, or drag its bottom edge to change the end. ') + 'Tap an event to edit it. Shifts, school, follow-ups and countdowns come from HQ.' + (S.busy ? ' Loading…' : '')));
     const keepScroll = root.querySelector('.cal-body'); const st = keepScroll ? keepScroll.scrollTop : null;
     root.replaceChildren(...out);
-    body.scrollTop = st != null ? st : 7 * ROW;
+    body.scrollTop = st != null ? st : (window.HQ_PREFS ? +window.HQ_PREFS.get('calScrollHour') : 7) * ROW;
   }
 
   // ---------- Dragging ----------

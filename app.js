@@ -146,6 +146,15 @@
     $('focus-next').hidden = !(next && next.mins);
     $('focus-next').onclick = () => next && openFocus(next, t);
     $('hero-done').hidden = !next;
+    let ob = $('hero-open');
+    if (!ob) { ob = document.createElement('button'); ob.id = 'hero-open'; ob.type = 'button'; ob.className = 'btn'; $('hero-done').before(ob); }
+    const sl = window.HQ_SCHOOL && window.HQ_SCHOOL.links().filter((l) => l.course);
+    ob.hidden = !(next && next.type === 'study' && sl && sl.length);
+    if (!ob.hidden) {
+      const rsa = /RSA/i.test(next.note || ''), l = sl.find((x) => x.course === (rsa ? 'rsa' : 'econ')) || sl[0];
+      ob.textContent = 'Open ' + (l.course === 'rsa' ? 'RSA' : 'eBus') + ' ↗';
+      ob.onclick = () => window.HQ_SCHOOL.go(l);
+    }
     $('hero-done').onclick = () => next && setTick(t, next.key, true);
     // Compact checklist: time and name only
     $('plan').replaceChildren(...rows.map((r) => {
@@ -233,7 +242,7 @@
       try { C = window.HQ_CALC.compute(data); } catch (e) { console.error(e); }
       const ctx = {D: data, C, sb, user, toast, rerender: render};
       if (C) window.HQ_TABS.render(ctx);
-      [window.HQ_SCHOOL, window.HQ_DOCS, window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
+      [window.HQ_PREFS, window.HQ_SCHOOL, window.HQ_DOCS, window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
     }
   }
 
@@ -254,6 +263,7 @@
   async function holdWake() { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) { wake = null; } }
   function releaseWake() { try { if (wake) wake.release(); } catch (e) { /* ignore */ } wake = null; }
   function beep() {
+    if (!(window.HQ_PREFS ? window.HQ_PREFS.get('focusSound') : true)) { try { if ((window.HQ_PREFS ? window.HQ_PREFS.get('focusVibrate') : true) && navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) { /* none */ } return; }
     try {
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
       [0, .25, .5].forEach((t) => {
@@ -265,7 +275,7 @@
         o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .22);
       });
     } catch (e) { /* no sound */ }
-    try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { /* no vibration */ }
+    try { if ((window.HQ_PREFS ? window.HQ_PREFS.get('focusVibrate') : true)) navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { /* no vibration */ }
   }
   const remaining = () => (F.endsAt ? Math.max(0, F.endsAt - Date.now()) : (F.left != null ? F.left : F.mins * 60000));
   function drawFocus() {
@@ -299,7 +309,8 @@
     if (f.phase === 'break') { F = null; store.del('hq_focus'); closeFocus(); toast('Break over. Next block.'); return; }
     beep();
     const mins = Math.round((f.mins * 60000 - remaining()) / 60000);
-    F = {key: 'break', label: 'Break', date: f.date, mins: 10, endsAt: early ? null : Date.now() + 10 * 60000, left: null, phase: 'break'};
+    const bm = +(window.HQ_PREFS ? window.HQ_PREFS.get('focusBreak') : 10) || 10;
+    F = {key: 'break', label: 'Break', date: f.date, mins: bm, endsAt: early ? null : Date.now() + bm * 60000, left: null, phase: 'break'};
     store.set('hq_focus', F);
     drawFocus();
     if (user) {
@@ -307,7 +318,7 @@
       const {error} = await sb.from('focus_sessions').insert({user_id: user.id, date: f.date, key: f.key, label: f.label, minutes: mins, started_at: f.startedAt || new Date().toISOString(), ended_at: new Date().toISOString()});
       if (error) toast('Focus time wasn’t saved.');
     }
-    toast(f.label + ': done. Take 10.');
+    toast(f.label + ': done. Take ' + (+(window.HQ_PREFS ? window.HQ_PREFS.get('focusBreak') : 10) || 10) + '.');
   }
   setInterval(() => {
     if (!F) return;

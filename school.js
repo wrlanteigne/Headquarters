@@ -17,6 +17,49 @@
     {k: 'econ', name: 'Economics 12', short: 'Econ', test: (u) => /^econ/i.test(u || ''), color: 'var(--blue)'},
     {k: 'rsa', name: 'RSA certificate', short: 'RSA', test: (u) => /^rsa/i.test(u || ''), color: 'var(--violet)'}
   ];
+  const DEFAULT_LINKS = [
+    {name: 'Economics 12', sub: 'eBus', url: 'https://my.ebus.ca/ebus/myebus.php', course: 'econ', icon: '📘'},
+    {name: 'RSA course', sub: 'BCIT Learning Hub', url: 'https://learn.bcit.ca/d2l/home', course: 'rsa', icon: '❄️'},
+    {name: 'Email Mrs. Keleher', sub: 'Econ teacher', url: 'mailto:kkeleher@sd91.bc.ca', icon: '✉️'}
+  ];
+  const links = () => { const r = (ctx.D.settings || []).find((x) => x.key === 'school_links'); return (r && Array.isArray(r.value) && r.value.length) ? r.value : DEFAULT_LINKS; };
+  const linkFor = (k) => links().find((l) => l.course === k);
+  function go(l) {
+    if (/^mailto:/.test(l.url) && window.HQ_MAIL) { window.HQ_MAIL.compose({to: l.url.slice(7)}); return; }
+    window.open(l.url, '_blank', 'noopener');
+  }
+  async function saveLinks(v) {
+    const D = ctx.D; D.settings = D.settings || [];
+    const row = {user_id: ctx.user.id, key: 'school_links', value: v};
+    const i = D.settings.findIndex((x) => x.key === 'school_links'); if (i >= 0) D.settings[i] = row; else D.settings.push(row);
+    const {error} = await ctx.sb.from('settings').upsert(row, {onConflict: 'user_id,key'});
+    if (error) ctx.toast('Not saved: ' + error.message); else ctx.toast('Links saved.');
+    ctx.rerender();
+  }
+  function editLinks() {
+    const list = links().map((l) => Object.assign({}, l));
+    const f = el('div', 'form');
+    const draw = () => {
+      f.replaceChildren();
+      list.forEach((l, i) => {
+        const row = el('div', 'linkedit');
+        const a = U.field('Name', 'n' + i, 'text', l.name), b = U.field('Link', 'u' + i, 'text', l.url, {placeholder: 'https://…'});
+        a.querySelector('input').addEventListener('input', (e) => { l.name = e.target.value; });
+        b.querySelector('input').addEventListener('input', (e) => { l.url = e.target.value.trim(); });
+        const x = U.btn('Remove', 'ghost mini', () => { list.splice(i, 1); draw(); });
+        row.append(a, b, x); f.append(row);
+      });
+      f.append(U.btn('＋ Add a link', 'mini', () => { list.push({name: '', url: 'https://', icon: '🔗'}); draw(); }));
+      f.append(el('p', 'muted small', 'Tip: open your course, copy the address from the top of the browser, and paste it here. Then one tap takes you straight in.'));
+    };
+    draw();
+    const ok = U.btn('Save', 'primary');
+    const sh = U.sheet('School links', f, {actions: [ok]});
+    ok.addEventListener('click', () => {
+      const v = list.filter((l) => l.name.trim() && l.url && l.url !== 'https://').map((l) => { let u = l.url; if (!/^(https?:|mailto:)/i.test(u)) u = 'https://' + u; return Object.assign(l, {url: u, name: l.name.trim()}); });
+      sh.close(); saveLinks(v);
+    });
+  }
   const courseOf = (r) => COURSES.find((c) => c.test(r.unit)) || {k: 'other', name: 'Other', short: '', color: 'var(--muted)'};
   const isTest = (r) => /^(test|exam)$/i.test(r.kind || '') || /\bexam\b/i.test(r.task);
 
@@ -71,6 +114,8 @@
     if (late) stats.append(el('span', 'late-t', late + ' late'));
     if (last) stats.append(el('span', '', 'Finish ' + dayName(last)));
     card.append(h, bar, stats);
+    const l = linkFor(c.k);
+    if (l) { const o = U.btn('Open ' + (c.k === 'econ' ? 'Econ' : 'RSA') + ' ↗', 'mini course-open', () => go(l)); card.append(o); }
     if (next) {
       const n = daysTo(next.date, t);
       const tb = el('div', 'course-next' + (n <= 7 ? ' soon' : ''));
@@ -98,6 +143,11 @@
     ht.append(el('p', 'muted small', leftToday ? leftToday + ' to do today' : todays.length ? 'All done for today' : 'Nothing due today'));
     head.append(ht);
     out.push(head);
+
+    const lr = el('div', 'qlinks');
+    links().forEach((l) => { const b = el('button', 'qlink'); b.type = 'button'; b.append(el('span', 'ql-i', l.icon || '🔗'), (() => { const t = el('span', 'ql-t'); t.append(el('b', '', l.name)); if (l.sub) t.append(el('span', '', l.sub)); return t; })(), el('span', 'ql-go', /^mailto:/.test(l.url) ? '✉' : '↗')); b.addEventListener('click', () => go(l)); lr.append(b); });
+    const ed = el('button', 'qlink edit', 'Edit links'); ed.type = 'button'; ed.addEventListener('click', editLinks); lr.append(ed);
+    out.push(lr);
 
     const cards = el('div', 'courses'); COURSES.forEach((co) => { if (tasks.some((r) => courseOf(r).k === co.k)) cards.append(courseCard(co, tasks, t)); });
     out.push(cards);
@@ -132,5 +182,5 @@
     root.replaceChildren(...out);
   }
 
-  window.HQ_SCHOOL = {render};
+  window.HQ_SCHOOL = {render, links: () => (ctx ? links() : DEFAULT_LINKS), go};
 })();

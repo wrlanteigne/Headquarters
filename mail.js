@@ -11,7 +11,7 @@
   const SCOPE = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly';
 
   let ctx = null, client = null, gisLoading = null;
-  const M = {status: 'idle', list: [], drafts: [], err: '', q: '', view: 'important', folder: 'inbox', me: null, loadedAt: 0, sel: new Set(), openId: null};
+  const M = {status: 'idle', list: [], drafts: [], err: '', q: '', view: (window.HQ_PREFS && window.HQ_PREFS.get('mailView')) || 'important', folder: 'inbox', me: null, loadedAt: 0, sel: new Set(), openId: null};
   const FOLDERS = {inbox: ['Inbox', 'in:inbox newer_than:30d'], starred: ['Starred', 'is:starred'], sent: ['Sent', 'in:sent newer_than:30d']};
   const wide = () => window.matchMedia('(min-width: 900px)').matches;
 
@@ -137,7 +137,14 @@
       const dr = await api('drafts?maxResults=15');
       const dm = await pool((dr.drafts || []).map((d) => d.id), 6, (id) => api('drafts/' + id + '?format=metadata'));
       M.drafts = dm.filter(Boolean).map((d) => ({id: d.id, threadId: d.message.threadId, to: hdr(d.message.payload, 'To'), subject: hdr(d.message.payload, 'Subject') || '(no subject)', snippet: d.message.snippet || '', date: +d.message.internalDate}));
-      M.status = 'ok'; M.loadedAt = Date.now();
+      M.status = 'ok';
+      // Pop-up for new important mail (if turned on in Settings)
+      const imp = M.list.filter((x) => x.p === 'high' && x.unread);
+      if (M.loadedAt && window.HQ_PREFS && window.HQ_PREFS.get('mailNotify') && 'Notification' in window && Notification.permission === 'granted') {
+        imp.filter((x) => !(M.seen || new Set()).has(x.id)).slice(0, 3).forEach((x) => { try { const n = new Notification(x.who.name, {body: x.subject, icon: 'icons/icon-192.png', tag: x.id}); n.onclick = () => { window.focus(); openMsg(x); }; } catch (e) { /* ignore */ } });
+      }
+      M.seen = new Set(imp.map((x) => x.id));
+      M.loadedAt = Date.now();
     } catch (e) {
       if (e.message !== 'signin') { M.err = e.message; M.status = M.status === 'ok' ? 'ok' : 'error'; }
     } finally { M.busy = false; draw(); if (ctx) refreshBadges(); }
@@ -163,7 +170,7 @@
     try {
       const th = await api('threads/' + m.threadId + '?format=full');
       const msgs = th.messages || [];
-      if (m.unread) { modify(m.id, [], ['UNREAD']).catch(() => {}); m.unread = false; draw(); refreshBadges(); }
+      if (m.unread && (!window.HQ_PREFS || window.HQ_PREFS.get('mailMarkRead'))) { modify(m.id, [], ['UNREAD']).catch(() => {}); m.unread = false; draw(); refreshBadges(); }
       wrap.replaceChildren();
       msgs.forEach((x, i) => {
         const w = who(hdr(x.payload, 'From'));
@@ -228,6 +235,8 @@
     const to = U.field('To', 'to', 'email', o.to || ''); to.querySelector('input').type = 'text'; to.querySelector('input').setAttribute('autocomplete', 'email');
     const sub = U.field('Subject', 'subject', 'text', o.subject || '');
     let start = o.body || '';
+    const sig = window.HQ_PREFS ? String(window.HQ_PREFS.get('mailSignature') || '').trim() : '';
+    if (sig && !o.draftId && !o.body) start = '\n\n' + sig + start;
     if (!start && o.quote) start = '\n\n\nOn ' + o.quote.when.toLocaleString('en-CA', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'}) + ', ' + o.quote.who + ' wrote:\n' + String(o.quote.text).split('\n').slice(0, 40).map((l) => '> ' + l).join('\n');
     const body = U.field('Message', 'body', 'textarea', start, {rows: 12});
     const chips = el('div', 'chips left');
@@ -441,5 +450,5 @@
     refresh: () => { if (tok.get()) load(); },
     google: {fetch: gfetch, ready: () => !!clientId(), connected: () => !!tok.get() && M.status !== 'signin', connectPanel: () => (clientId() ? connectPanel() : setupPanel())}
   };
-  setInterval(() => { if (!document.hidden && ctx && tok.get() && M.status === 'ok' && Date.now() - M.loadedAt > 180000) load(); }, 30000);
+  setInterval(() => { const r = window.HQ_PREFS ? +window.HQ_PREFS.get('mailRefresh') : 3; if (r && ctx && tok.get() && M.status === 'ok' && (!document.hidden || (window.HQ_PREFS && window.HQ_PREFS.get('mailNotify'))) && Date.now() - M.loadedAt > r * 60000) load(); }, 30000);
 })();

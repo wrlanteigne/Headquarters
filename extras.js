@@ -89,11 +89,12 @@
     const outr = (D.outreach || []).filter((o) => o.date >= m0).reduce((s, o) => s + (+o.contacted || 0), 0);
     const school = (D.tasks || []).filter((r) => r.done && r.done_at && ymd(new Date(r.done_at)) >= m0).length;
     const cell = (k, v, n, pct) => { const c = el('div', 'wk'); c.append(el('span', 'k', k), el('b', '', v)); if (n) c.append(el('span', 'n', n)); const bar = el('div', 'bar'); const i = el('i'); i.style.width = Math.min(100, pct) + '%'; bar.append(i); c.append(bar); return c; };
+    const P = window.HQ_PREFS, gF = +(P ? P.get('goalFocusHours') : 10) || 10, gG = +(P ? P.get('goalGym') : 5) || 5, gS = +(P ? P.get('goalSchool') : 10) || 10;
     fill('week-strip',
-      cell('Focus', Math.floor(focus / 60) + 'h ' + (focus % 60) + 'm', 'goal 10h', focus / 600 * 100),
-      cell('Gym', gym + ' / 5', 'sessions', gym / 5 * 100),
+      cell('Focus', Math.floor(focus / 60) + 'h ' + (focus % 60) + 'm', 'goal ' + gF + 'h', focus / (gF * 60) * 100),
+      cell('Gym', gym + ' / ' + gG, 'sessions', gym / gG * 100),
       cell('Outreach', outr + ' / ' + ctx.C.G.SALES_TARGETS.contacted, 'contacted', outr / ctx.C.G.SALES_TARGETS.contacted * 100),
-      cell('School', String(school), 'tasks done', Math.min(100, school / 10 * 100)));
+      cell('School', school + ' / ' + gS, 'tasks done', Math.min(100, school / gS * 100)));
   }
 
   // =========================================================
@@ -370,7 +371,9 @@
       {k: 'Do', t: 'New doc', run: () => window.HQ_DOCS.create()},
       {k: 'Do', t: 'Start a focus block', run: () => { go('today'); setTimeout(() => $('focus-next').click(), 50); }},
       {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
-      {k: 'Help', t: 'How HQ works', run: guide}
+      {k: 'Help', t: 'How HQ works', run: guide},
+      {k: 'Go to', t: 'Settings · dark mode, colours, mail, password…', run: () => go('settings')},
+      ...(window.HQ_SCHOOL ? window.HQ_SCHOOL.links().map((l) => ({k: 'Open', t: l.name + (l.sub ? ' · ' + l.sub : ''), run: () => window.HQ_SCHOOL.go(l)})) : [])
     ];
     const items = () => base.concat(
       (D.leads || []).map((l) => ({k: 'Lead · ' + l.stage, t: l.business + (l.contact ? ' · ' + l.contact : ''), run: () => leadForm(l)})),
@@ -440,7 +443,7 @@
   window.HQ_EXTRAS = {
     render(c) {
       ctx = c;
-      [inboxPanel, followPanel, weekStrip, pipeline, ideas, automations, subscriptions, settings, status].forEach((f) => { try { f(c); } catch (e) { console.error(f.name, e); } });
+      [inboxPanel, followPanel, weekStrip, pipeline, ideas, automations, subscriptions, status].forEach((f) => { try { f(c); } catch (e) { console.error(f.name, e); } });
     },
     inboxPanel, leadForm, quickAdd, palette, guide
   };
