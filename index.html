@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=16">
+  <link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
   <!-- Start-up screen: plays every time the app opens -->
@@ -56,7 +56,7 @@
       <button class="side-search" type="button" data-act="search"><span>Search…</span><kbd>⌘K</kbd></button>
       <nav class="tabs" role="tablist" aria-label="Sections">
         <span class="nav-g">Overview</span>
-        <button class="tab on" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Today</span></button><button class="tab" role="tab" data-tab="goals" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></svg><span>Goals</span></button>
+        <button class="tab on" role="tab" data-tab="today" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Today</span></button><button class="tab" role="tab" data-tab="goals" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></svg><span>Goals</span></button><button class="tab" role="tab" data-tab="learn" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5M8 7h8M8 11h6"/></svg><span>Learn</span></button>
         <span class="nav-g">Comms</span>
         <button class="tab" role="tab" data-tab="mail" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Mail</span></button><button class="tab" role="tab" data-tab="calendar" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Calendar</span></button>
         <span class="nav-g">Work</span>
@@ -101,6 +101,7 @@
         <div class="panel" id="today-cal" hidden></div>
       </div>
       <div class="panel" id="today-follow" hidden></div>
+      <div class="panel" id="today-learn"></div>
 
       <div class="panel">
         <div class="panel-h"><h2>Today</h2><span class="muted small">~3,100 kcal · 2.5 L water</span></div>
@@ -156,6 +157,7 @@
       <p class="muted small">Goals 1 and 2 count all income, with work pay after tax. Goal 3 counts only passive income, like template sales and hosting retainers.</p>
     </section>
 
+    <section id="learn" class="view" hidden><div id="learn-root"></div></section>
     <section id="mail" class="view" hidden><div id="mail-root"></div></section>
     <section id="calendar" class="view" hidden><div id="cal-root"></div></section>
     <section id="docs" class="view" hidden><div id="docs-root"></div></section>
@@ -198,17 +200,19 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js?v=16"></script>
-  <script src="plans.js?v=16"></script>
-  <script src="calc.js?v=16"></script>
-  <script src="ui.js?v=16"></script>
-  <script src="prefs.js?v=16"></script>
-  <script src="tabs.js?v=16"></script>
-  <script src="mail.js?v=16"></script>
-  <script src="calendar.js?v=16"></script>
-  <script src="docs.js?v=16"></script>
-  <script src="school.js?v=16"></script>
-  <script src="extras.js?v=16"></script>
-  <script src="app.js?v=16"></script>
+  <script src="config.js?v=17"></script>
+  <script src="plans.js?v=17"></script>
+  <script src="calc.js?v=17"></script>
+  <script src="ui.js?v=17"></script>
+  <script src="prefs.js?v=17"></script>
+  <script src="tabs.js?v=17"></script>
+  <script src="mail.js?v=17"></script>
+  <script src="calendar.js?v=17"></script>
+  <script src="learn-data.js?v=17"></script>
+  <script src="learn.js?v=17"></script>
+  <script src="docs.js?v=17"></script>
+  <script src="school.js?v=17"></script>
+  <script src="extras.js?v=17"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

@@ -246,7 +246,7 @@
       try { C = window.HQ_CALC.compute(data); } catch (e) { console.error(e); }
       const ctx = {D: data, C, sb, user, toast, rerender: render};
       if (C) window.HQ_TABS.render(ctx);
-      [window.HQ_PREFS, window.HQ_SCHOOL, window.HQ_DOCS, window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
+      [window.HQ_PREFS, window.HQ_LEARN, window.HQ_SCHOOL, window.HQ_DOCS, window.HQ_EXTRAS, window.HQ_MAIL, window.HQ_CAL].forEach((m) => { try { if (m) m.render(ctx); } catch (e) { console.error(e); } });
     }
   }
 

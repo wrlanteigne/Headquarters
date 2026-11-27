@@ -381,7 +381,7 @@
     sh.box.classList.add('pal-sheet');
     const D = ctx.D;
     const base = [
-      ...[['today', 'Today'], ['calendar', 'Calendar'], ['mail', 'Mail'], ['sales', 'People & pipeline'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['goals', 'Goals'], ['automations', 'Automations'], ['subs', 'Subscriptions'], ['settings', 'Settings']].map(([k, l]) => ({k: 'Go to', t: l, run: () => go(k)})),
+      ...[['today', 'Today'], ['learn', 'Learn · Founder School'], ['calendar', 'Calendar'], ['mail', 'Mail'], ['sales', 'People & pipeline'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['goals', 'Goals'], ['automations', 'Automations'], ['subs', 'Subscriptions'], ['settings', 'Settings']].map(([k, l]) => ({k: 'Go to', t: l, run: () => go(k)})),
       {k: 'Do', t: 'Write an email', run: () => window.HQ_MAIL && window.HQ_MAIL.compose()},
       {k: 'Do', t: 'New calendar event', run: () => { const s = new Date(); s.setMinutes(0, 0, 0); s.setHours(s.getHours() + 1); window.HQ_CAL.newEvent({start: s, end: new Date(s.getTime() + 3600000)}); }},
       {k: 'Do', t: 'New lead', run: () => leadForm()},
@@ -399,6 +399,7 @@
       (D.attention || []).filter((a) => a.status === 'open').map((a) => ({k: 'Needs you', t: a.title || a.item, extra: a.item, run: () => go('today')})),
       (D.tasks || []).filter((r) => !r.done).map((r) => ({k: 'School · ' + dayName(r.date), t: r.task, run: () => go('school')})),
       (D.clients || []).map((c) => ({k: 'Client', t: c.business, run: () => go('sales')})),
+      (window.HQ_LEARN ? window.HQ_LEARN.lessons : []).map((l) => ({k: 'Lesson', t: l.title, extra: l.level.title + ' ' + l.body.join(' '), run: () => { go('learn'); window.HQ_LEARN.open(l.id); }})),
       (D.notes || []).filter((n) => !n.done).map((n) => ({k: 'Idea', t: n.text, run: () => go('goals')}))
     );
     let sel = 0, shown = [];
@@ -423,6 +424,7 @@
     const w = el('div', 'guide');
     [
       ['Today', 'Your plan for the day, the one thing to do next, what needs you, important email, your calendar and follow-ups. Tick things off as you go.'],
+      ['Learn', 'Founder School: 40 five-minute lessons on building a company and being a CEO, from finding problems to sales, money, systems, leading people and growing big. Each ends with one move for your own business. Your next lesson shows on Today.'],
       ['Calendar', 'Your Google Calendar with Meadow Park shifts, school and follow-ups on top. Click an empty time to add an event.'],
       ['Mail', 'Your Gmail, sorted: Important first (clients, leads, school, work, money), everything else below. Read, reply, write, archive. Claude’s morning drafts wait at the top for you to check and send.'],
       ['People', 'Your sales pipeline. Every lead is a card: drag it from New → Contacted → Replied → Preview → Signed. Moving it forward counts it in your outreach.'],

@@ -10,7 +10,7 @@
     name: 'William', place: 'Whistler, BC',
     theme: 'light', accent: '#2563EB', textSize: 'm', compact: false, boot: true, motion: true,
     startTab: 'last', hiddenTabs: [],
-    todayPanels: {quote: true, status: true, week: true, inbox: true, calendar: true, follow: true, needs: true, outreach: true},
+    todayPanels: {learn: true, quote: true, status: true, week: true, inbox: true, calendar: true, follow: true, needs: true, outreach: true},
     goalFocusHours: 10, goalGym: 5, goalSchool: 10,
     mailRefresh: 3, mailView: 'important', mailMarkRead: true, mailSignature: '', mailNotify: false,
     weekStart: 1, eventLength: 60, calScrollHour: 7,
@@ -18,7 +18,7 @@
     autoLock: 0
   };
   const ACCENTS = [['#2563EB', 'Blue'], ['#7C3AED', 'Violet'], ['#059669', 'Green'], ['#EA580C', 'Orange'], ['#DB2777', 'Pink'], ['#0891B2', 'Teal'], ['#18181B', 'Graphite']];
-  const TABS = [['today', 'Today'], ['goals', 'Goals'], ['mail', 'Mail'], ['calendar', 'Calendar'], ['sales', 'People'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['subs', 'Subscriptions'], ['automations', 'Automations']];
+  const TABS = [['today', 'Today'], ['goals', 'Goals'], ['learn', 'Learn'], ['mail', 'Mail'], ['calendar', 'Calendar'], ['sales', 'People'], ['docs', 'Docs'], ['school', 'School'], ['money', 'Money'], ['subs', 'Subscriptions'], ['automations', 'Automations']];
 
   let P = Object.assign({}, DEFAULTS, cached());
   function cached() { try { return JSON.parse(localStorage.getItem('hq_prefs')) || {}; } catch (e) { return {}; } }
@@ -44,7 +44,7 @@
     // Today panels
     const tp = Object.assign({}, DEFAULTS.todayPanels, get('todayPanels'));
     const show = (id, v) => { const n = $(id); if (n) n.classList.toggle('pref-off', !v); };
-    show('hype', tp.quote); show('status', tp.status); show('week-strip', tp.week); show('today-inbox', tp.inbox); show('today-cal', tp.calendar); show('today-follow', tp.follow); show('needs', tp.needs); show('outreach', tp.outreach);
+    show('hype', tp.quote); show('status', tp.status); show('week-strip', tp.week); show('today-inbox', tp.inbox); show('today-cal', tp.calendar); show('today-follow', tp.follow); show('needs', tp.needs); show('outreach', tp.outreach); show('today-learn', tp.learn);
     // Name
     const brand = document.querySelector('.brand b'); if (brand) brand.textContent = get('name') + '’s HQ';
     const sub = document.querySelector('.brand div span'); if (sub) sub.textContent = get('place');
@@ -148,6 +148,7 @@
         toggle('Inbox', 'Important unread email', 'todayPanels', 'inbox'),
         toggle('Calendar', 'Your next events', 'todayPanels', 'calendar'),
         toggle('Follow-ups due', 'Leads to contact today', 'todayPanels', 'follow'),
+        toggle('Today’s lesson', 'Your next Founder School lesson', 'todayPanels', 'learn'),
         toggle('Needs you', 'Things Claude flagged', 'todayPanels', 'needs'),
         toggle('Outreach counter', null, 'todayPanels', 'outreach'),
         text('Focus goal', 'Hours of focus a week', 'goalFocusHours', {type: 'number', min: 1, max: 80}),
