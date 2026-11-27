@@ -53,7 +53,7 @@
         out.push({k: c.kind || 'date', t: c.title + ' tomorrow · ' + clock(at), n: tip});
       }
     });
-    (D.tasks || []).forEach((t) => { if (t.date === tm && /test|exam|quiz/i.test(t.title || '') && !out.some((o) => o.t.toLowerCase().includes(String(t.title).toLowerCase()))) out.push({k: 'school', t: t.title + ' tomorrow', n: 'Review tonight, sleep early.'}); });
+    (D.tasks || []).forEach((t) => { const nm = t.task || t.title || ''; if (t.date === tm && !t.done && /test|exam|quiz/i.test((t.kind || '') + ' ' + nm) && !out.some((o) => /rsa/i.test(o.t) && /rsa/i.test(nm))) out.push({k: 'school', t: (t.unit ? t.unit + ': ' : '') + nm + ' tomorrow', n: 'Review tonight, sleep early.'}); });
     return out;
   }
   function tonight() {
