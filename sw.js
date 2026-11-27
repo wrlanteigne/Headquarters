@@ -1,6 +1,6 @@
 // Keeps the app shell available offline. Network first, so updates show up right away.
-const CACHE = 'hq-v19';
-const SHELL = ['./', 'index.html', 'styles.css?v=18', 'config.js?v=18', 'plans.js?v=18', 'calc.js?v=18', 'tabs.js?v=18', 'app.js?v=18', 'ui.js?v=18', 'mail.js?v=18', 'calendar.js?v=18', 'learn-data.js?v=18', 'learn.js?v=18', 'docs.js?v=18', 'school.js?v=18', 'prefs.js?v=18', 'extras.js?v=18', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'hq-v20';
+const SHELL = ['./', 'index.html', 'styles.css?v=19', 'config.js?v=19', 'plans.js?v=19', 'calc.js?v=19', 'tabs.js?v=19', 'app.js?v=19', 'ui.js?v=19', 'mail.js?v=19', 'calendar.js?v=19', 'learn-data.js?v=19', 'learn.js?v=19', 'docs.js?v=19', 'school.js?v=19', 'prefs.js?v=19', 'extras.js?v=19', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {

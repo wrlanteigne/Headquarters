@@ -199,13 +199,13 @@
       card('There', pct(Math.max(0, C.swissPct)), null, {bar: C.swissPct}),
       card('Living costs there', money(C.G.SWISS_MONTHLY_CHF * C.G.CHF_CAD) + '/mo', '1,400 CHF a month'));
     const trips = [
-      {k: 'Switzerland · Lea + ski', date: '2027-02-04', n: 'Feb 4 – 21, 2027', exp: 'e1'},
+      {k: 'Switzerland · Lea + ski', date: '2027-02-04', n: 'Air France · leaves YVR Thu Feb 4, 5:35 pm · back Sun Feb 21', exp: 'e1'},
       {k: 'Puerto Vallarta', date: '2027-03-22', n: 'From YVR, Mar 22, 2027', exp: 'e2'}
     ];
     fill('trip-cards', ...trips.map((tr) => {
       const days = Math.ceil((window.HQ_CALC.parse(tr.date) - window.HQ_CALC.parse(C.t)) / 864e5);
       const e = ctx.D.expenses.find((x) => x.id === tr.exp); const have = C.funded[tr.exp] || 0;
-      return card(tr.k, days + ' days', [tr.n, e ? money(have) + ' of ' + money(e.amount_cad) + ' budget set aside' : ''], {bar: e && +e.amount_cad ? have / e.amount_cad * 100 : null});
+      return card(tr.k, days + ' days', [tr.n, e && /not booked/i.test(e.note || '') ? '⚠ Flight not booked yet' : '', e ? money(have) + ' of ' + money(e.amount_cad) + ' budget set aside' : ''], {bar: e && +e.amount_cad ? have / e.amount_cad * 100 : null});
     }));
   }
 
