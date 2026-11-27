@@ -86,10 +86,11 @@
 
   // ---------- Day plan ----------
   const lateEnd = (e) => !!e && (e < '06:00' || e >= '22:00');
+  const clock12 = (hm) => { const [h, m] = String(hm).split(':').map(Number); return (h % 12 || 12) + ':' + String(m || 0).padStart(2, '0') + (h < 12 ? ' am' : ' pm'); };
   function dayKind(t) {
     const real = data.shifts.filter((s) => !s.extra);
     const sh = real.find((s) => s.date === t);
-    if (sh) return {kind: 'shift', shift: sh};
+    if (sh) return {kind: !sh.start_time ? 'shift' : sh.start_time < '12:00' ? 'shiftAM' : 'shiftPM', shift: sh};
     const y = real.find((s) => s.date === addDays(t, -1));
     return {kind: y && lateEnd(y.end_time) ? 'late' : 'off', shift: null};
   }
@@ -103,7 +104,7 @@
     const tasks = openTasks(t).map((r) => (r.date < t ? 'Late: ' : '') + r.task);
     const done = new Set(data.ticks.filter((r) => r.done).map((r) => r.key));
     let items = PLANS[kind].items;
-    if (kind === 'shift' && !tasks.length) items = items.filter((i) => i.type !== 'study');
+    if (/^shift/.test(kind) && !tasks.length) items = items.filter((i) => i.type !== 'study');
     // Spread today's school tasks evenly over the school blocks, in order
     const studyKeys = items.filter((i) => i.type === 'study').map((i) => i.key);
     const per = Math.ceil(tasks.length / Math.max(1, studyKeys.length));
@@ -115,7 +116,7 @@
         const list = mine.length ? mine.join(' · ') : (tasks.length ? 'Finish what the earlier blocks didn’t, then start tomorrow’s Economics.' : 'No school tasks today: get ahead on the next Economics lesson.');
         note = (note ? note + ' ' : '') + list;
       }
-      if (i.key === 'work' && shift && shift.start_time && shift.end_time) time = shift.start_time + '–' + shift.end_time;
+      if (i.key === 'work' && shift && shift.start_time && shift.end_time) time = clock12(shift.start_time) + '–' + clock12(shift.end_time);
       return {...i, note, time, done: done.has(i.key)};
     });
     return {kind, plan: PLANS[kind], rows, t};
