@@ -390,6 +390,7 @@
       {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
       {k: 'Help', t: 'How HQ works', run: guide},
       {k: 'Do', t: 'Undo the last change (⌘Z)', run: () => window.HQ_UI.undo()},
+      {k: 'Do', t: 'Ask Claude (⌘J)', run: () => window.HQ_CHAT && window.HQ_CHAT.open()},
       {k: 'Go to', t: 'Settings · dark mode, colours, mail, password…', run: () => go('settings')},
       ...(window.HQ_SCHOOL ? window.HQ_SCHOOL.links().map((l) => ({k: 'Open', t: l.name + (l.sub ? ' · ' + l.sub : ''), run: () => window.HQ_SCHOOL.go(l)})) : [])
     ];
@@ -433,6 +434,7 @@
       ['Money · Goals', 'Income, paycheque split, savings, investments and your goals, plus an Ideas list on Goals.'],
       ['Automations', 'What Claude runs for you each day and everything it did lately.'],
       ['Subscriptions', 'Everything you pay for every month, business and personal.'],
+      ['Ask Claude', 'The chat bubble (bottom right, or ⌘J) lets you text Claude. It opens your Claude app with your message plus a short summary of your day, school, money and leads, so Claude already knows what’s going on. Free, no API key.'],
       ['Undo', 'Clicked something by accident? Tap Undo on the bar at the bottom, or press ⌘Z (Ctrl+Z). Works for ticks, leads, docs, email, calendar and more. Sent emails wait 5 seconds so you can stop them.'],
       ['Shortcuts', '＋ button (bottom right): add an email, event, lead, doc, idea, reminder, gym session or spending. ⌘K (or the search box): find anything in HQ. Press ? for this guide.'],
       ['Ask Claude', 'Anything HQ can’t do yet, ask Claude in chat. It can read and change HQ’s data for you.']
