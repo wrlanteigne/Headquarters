@@ -146,7 +146,7 @@
         toggle('Tonight', 'Heads-up the evening before a shift or exam', 'todayPanels', 'tonight'),
         toggle('Daily quote', null, 'todayPanels', 'quote'),
         toggle('Countdowns bar', 'Next shift, payday and trips', 'todayPanels', 'status'),
-        toggle('This week', 'Focus, gym, outreach and school', 'todayPanels', 'week'),
+        toggle('This week', 'Focus, outreach and school', 'todayPanels', 'week'),
         toggle('Inbox', 'Important unread email', 'todayPanels', 'inbox'),
         toggle('Calendar', 'Your next events', 'todayPanels', 'calendar'),
         toggle('Follow-ups due', 'Leads to contact today', 'todayPanels', 'follow'),
@@ -154,7 +154,6 @@
         toggle('Needs you', 'Things Claude flagged', 'todayPanels', 'needs'),
         toggle('Outreach counter', null, 'todayPanels', 'outreach'),
         text('Focus goal', 'Hours of focus a week', 'goalFocusHours', {type: 'number', min: 1, max: 80}),
-        text('Gym goal', 'Sessions a week', 'goalGym', {type: 'number', min: 1, max: 14}),
         text('School goal', 'Tasks a week', 'goalSchool', {type: 'number', min: 1, max: 100})
       ])],
       ['sidebar', 'Sidebar', section('sidebar', 'Sidebar', 'Hide pages you don’t use. Settings always stays.', [

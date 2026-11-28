@@ -85,14 +85,12 @@
     const D = ctx.D, t = parse(today());
     const mon = new Date(t); mon.setDate(t.getDate() - ((t.getDay() + 6) % 7)); const m0 = ymd(mon);
     const focus = (D.focus || []).filter((f) => f.date >= m0).reduce((s, f) => s + (+f.minutes || 0), 0);
-    const gym = (D.gym || []).filter((g) => g.date >= m0).length;
     const outr = (D.outreach || []).filter((o) => o.date >= m0).reduce((s, o) => s + (+o.contacted || 0), 0);
     const school = (D.tasks || []).filter((r) => r.done && r.done_at && ymd(new Date(r.done_at)) >= m0).length;
     const cell = (k, v, n, pct) => { const c = el('div', 'wk'); c.append(el('span', 'k', k), el('b', '', v)); if (n) c.append(el('span', 'n', n)); const bar = el('div', 'bar'); const i = el('i'); i.style.width = Math.min(100, pct) + '%'; bar.append(i); c.append(bar); return c; };
-    const P = window.HQ_PREFS, gF = +(P ? P.get('goalFocusHours') : 10) || 10, gG = +(P ? P.get('goalGym') : 5) || 5, gS = +(P ? P.get('goalSchool') : 10) || 10;
+    const P = window.HQ_PREFS, gF = +(P ? P.get('goalFocusHours') : 10) || 10, gS = +(P ? P.get('goalSchool') : 10) || 10;
     fill('week-strip',
       cell('Focus', Math.floor(focus / 60) + 'h ' + (focus % 60) + 'm', 'goal ' + gF + 'h', focus / (gF * 60) * 100),
-      cell('Gym', gym + ' / ' + gG, 'sessions', gym / gG * 100),
       cell('Outreach', outr + ' / ' + ctx.C.G.SALES_TARGETS.contacted, 'contacted', outr / ctx.C.G.SALES_TARGETS.contacted * 100),
       cell('School', school + ' / ' + gS, 'tasks done', Math.min(100, school / gS * 100)));
   }
@@ -525,13 +523,6 @@
         if (!v.title) return; const row = {id: nid('w'), priority: v.priority, area: 'Me', title: v.title.slice(0, 60), item: v.title, status: 'open'};
         if (await save('attention', row)) { ctx.D.attention.push(Object.assign({user_id: ctx.user.id, created_at: new Date().toISOString()}, row)); ctx.rerender(); window.HQ_UI.undoable('Added to Needs you.', async () => { await ctx.sb.from('attention').delete().eq('id', row.id); ctx.D.attention = ctx.D.attention.filter((q) => q.id !== row.id); ctx.rerender(); }); }
       })],
-      ['🏋', 'Gym', () => simple('Log gym', [U.field('Date', 'date', 'date', today()), U.field('Session', 'session', 'select', null, {options: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Full body', 'Cardio'].map((x) => [x, x])}), U.field('Bodyweight (lbs, optional)', 'bw', 'number', '')], async (v) => {
-        const row = {user_id: ctx.user.id, date: v.date || today(), session: v.session, bodyweight_lbs: v.bw ? +v.bw : null};
-        const {data, error} = await ctx.sb.from('gym').insert(row).select().single();
-        if (error) { ctx.toast('Not saved: ' + error.message); return; }
-        ctx.D.gym.push(data); ctx.rerender();
-        window.HQ_UI.undoable('Gym logged. ' + ctx.D.gym.filter((g) => g.date >= ymd(new Date(Date.now() - ((new Date().getDay() + 6) % 7) * 864e5))).length + ' this week.', async () => { await ctx.sb.from('gym').delete().eq('id', data.id); ctx.D.gym = ctx.D.gym.filter((q) => q.id !== data.id); ctx.rerender(); });
-      })],
       ['$', 'Spent', () => simple('Log spending', [U.field('What', 'item', 'text', ''), U.field('Amount (CAD)', 'amt', 'number', ''), U.field('Kind', 'cat', 'select', null, {options: [['Food', 'Food'], ['Fun', 'Fun'], ['Transport', 'Transport'], ['Shopping', 'Shopping'], ['Other', 'Other']]})], async (v) => {
         if (!v.item || !v.amt) return; const row = {id: nid('x'), month: today().slice(0, 7), item: v.item, category: v.cat, type: 'spent', amount_cad: +v.amt, note: 'Logged in HQ ' + today()};
         if (await save('expenses', row)) { ctx.D.expenses.push(row); ctx.rerender(); window.HQ_UI.undoable('Logged ' + money(+v.amt, 2) + ' for ' + v.item + '.', async () => { await ctx.sb.from('expenses').delete().eq('id', row.id); ctx.D.expenses = ctx.D.expenses.filter((q) => q.id !== row.id); ctx.rerender(); }); }
@@ -566,7 +557,7 @@
       {k: 'Do', t: 'New idea', run: () => ideaForm()},
       {k: 'Do', t: 'New doc', run: () => window.HQ_DOCS.create()},
       {k: 'Do', t: 'Start a focus block', run: () => { go('today'); setTimeout(() => $('focus-next').click(), 50); }},
-      {k: 'Do', t: 'Quick add (gym, spending, idea…)', run: quickAdd},
+      {k: 'Do', t: 'Quick add (spending, idea…)', run: quickAdd},
       {k: 'Help', t: 'How HQ works', run: guide},
       {k: 'Do', t: 'Undo the last change (⌘Z)', run: () => window.HQ_UI.undo()},
       {k: 'Go to', t: 'Settings · dark mode, colours, mail, password…', run: () => go('settings')},
@@ -614,7 +605,7 @@
       ['Automations', 'What Claude runs for you each day and everything it did lately.'],
       ['Subscriptions', 'Everything you pay for every month, business and personal.'],
       ['Undo', 'Clicked something by accident? Tap Undo on the bar at the bottom, or press ⌘Z (Ctrl+Z). Works for ticks, leads, docs, email, calendar and more. Sent emails wait 5 seconds so you can stop them.'],
-      ['Shortcuts', '＋ button (bottom right): add an email, event, lead, doc, idea, reminder, gym session or spending. ⌘K (or the search box): find anything in HQ. Press ? for this guide.'],
+      ['Shortcuts', '＋ button (bottom right): add an email, event, lead, doc, idea, reminder or spending. ⌘K (or the search box): find anything in HQ. Press ? for this guide.'],
       ['Ask Claude', 'Anything HQ can’t do yet, ask Claude in chat. It can read and change HQ’s data for you.']
     ].forEach(([k, v]) => { const d = el('div', 'g-row'); d.append(el('b', '', k), el('p', '', v)); w.append(d); });
     U.sheet('How HQ works', w, {noFocus: true});
